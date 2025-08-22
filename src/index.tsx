@@ -120,7 +120,19 @@ app.get('/api/auth/user', async (c) => {
   return c.json({ success: true, user })
 })
 
-// 使用制限チェック
+// Firebase認証統合
+import { 
+  authMiddleware, 
+  requireAuth, 
+  handleDemoLogin, 
+  handleFirebaseLogin, 
+  handleFirebaseRegister, 
+  handleLogout 
+} from './lib/authMiddleware'
+import { UserService } from './services/userService'
+import { UsageLimitService } from './services/usageLimitService'
+
+// 使用制限チェック（基本）
 app.get('/api/usage/check', async (c) => {
   const user = c.get('user')
   if (!user) {
@@ -132,6 +144,98 @@ app.get('/api/usage/check', async (c) => {
     return c.json({ success: true, ...usageInfo })
   } catch (error) {
     return c.json({ success: false, error: '使用制限チェックに失敗しました' }, 500)
+  }
+})
+
+// 詳細使用統計取得
+app.get('/api/usage/stats', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: 'ログインが必要です' }, 401)
+  }
+  
+  try {
+    const stats = await UsageLimitService.getMonthlyUsageStats(user.uid)
+    return c.json({ success: true, stats })
+  } catch (error) {
+    return c.json({ success: false, error: '使用統計取得に失敗しました' }, 500)
+  }
+})
+
+// ダッシュボード用統計データ
+app.get('/api/usage/dashboard', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: 'ログインが必要です' }, 401)
+  }
+  
+  try {
+    const dashboardData = await UsageLimitService.getDashboardStats(user.uid)
+    return c.json({ success: true, data: dashboardData })
+  } catch (error) {
+    return c.json({ success: false, error: 'ダッシュボードデータ取得に失敗しました' }, 500)
+  }
+})
+
+// アクション別使用制限チェック
+app.get('/api/usage/check/:actionType', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: 'ログインが必要です' }, 401)
+  }
+  
+  const actionType = c.req.param('actionType') as 'single_analysis' | 'ab_comparison' | 'copy_generation'
+  
+  if (!['single_analysis', 'ab_comparison', 'copy_generation'].includes(actionType)) {
+    return c.json({ success: false, error: '無効なアクションタイプです' }, 400)
+  }
+  
+  try {
+    const usageInfo = await UsageLimitService.checkActionUsageLimit(user.uid, actionType)
+    const recommendation = UsageLimitService.getUpgradeRecommendation(user.plan, actionType)
+    
+    return c.json({ 
+      success: true, 
+      ...usageInfo,
+      recommendation: !usageInfo.canUse ? recommendation : null
+    })
+  } catch (error) {
+    return c.json({ success: false, error: 'アクション制限チェックに失敗しました' }, 500)
+  }
+})
+
+// プラン変更
+app.post('/api/user/plan', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: 'ログインが必要です' }, 401)
+  }
+  
+  try {
+    const { newPlan } = await c.req.json()
+    
+    if (!['free', 'basic', 'premium'].includes(newPlan)) {
+      return c.json({ success: false, error: '無効なプランです' }, 400)
+    }
+    
+    // プラン変更権限チェック
+    if (newPlan !== user.plan) {
+      await UserService.updateUserPlan(user.uid, newPlan)
+      
+      return c.json({
+        success: true,
+        message: `プランが${newPlan}に変更されました`,
+        user: { ...user, plan: newPlan }
+      })
+    } else {
+      return c.json({
+        success: false,
+        error: '既に同じプランです'
+      }, 400)
+    }
+    
+  } catch (error) {
+    return c.json({ success: false, error: 'プラン変更に失敗しました' }, 500)
   }
 })
 
@@ -181,12 +285,14 @@ app.post('/api/analysis/single', async (c) => {
 
     // 使用制限チェック（デモユーザーは除外）
     if (user.uid !== 'demo-user-123') {
-      const usageCheck = await UserService.checkUsageLimit(user.uid)
-      if (!usageCheck.canUse) {
+      const actionUsageCheck = await UsageLimitService.checkActionUsageLimit(user.uid, 'single_analysis')
+      if (!actionUsageCheck.canUse) {
+        const recommendation = UsageLimitService.getUpgradeRecommendation(user.plan, 'single_analysis')
         return c.json({ 
           success: false, 
-          error: '月間使用回数の上限に達しました。プランをアップグレードしてください。',
-          usageInfo: usageCheck
+          error: `AI広告診断の月間使用上限に達しました (${actionUsageCheck.actionLimit}回)`,
+          usageInfo: actionUsageCheck,
+          recommendation
         }, 429)
       }
     }
@@ -305,12 +411,14 @@ app.post('/api/analysis/compare', async (c) => {
 
     // 使用制限チェック（デモユーザーは除外）
     if (user.uid !== 'demo-user-123') {
-      const usageCheck = await UserService.checkUsageLimit(user.uid)
-      if (!usageCheck.canUse) {
+      const actionUsageCheck = await UsageLimitService.checkActionUsageLimit(user.uid, 'ab_comparison')
+      if (!actionUsageCheck.canUse) {
+        const recommendation = UsageLimitService.getUpgradeRecommendation(user.plan, 'ab_comparison')
         return c.json({ 
           success: false, 
-          error: '月間使用回数の上限に達しました。プランをアップグレードしてください。',
-          usageInfo: usageCheck
+          error: `A/B比較分析の月間使用上限に達しました (${actionUsageCheck.actionLimit}回)`,
+          usageInfo: actionUsageCheck,
+          recommendation
         }, 429)
       }
     }
@@ -439,12 +547,14 @@ app.post('/api/copy-generation', async (c) => {
 
     // 使用制限チェック（デモユーザーは除外）
     if (user.uid !== 'demo-user-123') {
-      const usageCheck = await UserService.checkUsageLimit(user.uid)
-      if (!usageCheck.canUse) {
+      const actionUsageCheck = await UsageLimitService.checkActionUsageLimit(user.uid, 'copy_generation')
+      if (!actionUsageCheck.canUse) {
+        const recommendation = UsageLimitService.getUpgradeRecommendation(user.plan, 'copy_generation')
         return c.json({ 
           success: false, 
-          error: '月間使用回数の上限に達しました。プランをアップグレードしてください。',
-          usageInfo: usageCheck
+          error: `AIコピー生成の月間使用上限に達しました (${actionUsageCheck.actionLimit}回)`,
+          usageInfo: actionUsageCheck,
+          recommendation
         }, 429)
       }
     }
