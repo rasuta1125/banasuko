@@ -325,9 +325,7 @@ export const CopyGenerationPage = () => {
             
             // Image upload handlers
             if (dropZone && imageUpload) {
-              dropZone.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              dropZone.addEventListener('click', () => {
                 imageUpload.click();
               });
               dropZone.addEventListener('dragover', (e) => {

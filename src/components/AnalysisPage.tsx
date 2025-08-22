@@ -402,9 +402,7 @@ export const AnalysisPage = () => {
             });
             
             // Single image upload
-            dropZone.addEventListener('click', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
+            dropZone.addEventListener('click', () => {
               imageUpload.click();
             });
             dropZone.addEventListener('dragover', (e) => {
@@ -465,9 +463,7 @@ export const AnalysisPage = () => {
               const imagePreview = document.getElementById('imagePreview' + pattern);
               const previewImage = document.getElementById('previewImage' + pattern);
               
-              dropZone.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              dropZone.addEventListener('click', () => {
                 imageUpload.click();
               });
               dropZone.addEventListener('dragover', (e) => {

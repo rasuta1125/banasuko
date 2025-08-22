@@ -37,6 +37,18 @@ app.get('/copy-generation', (c) => {
 })
 
 // API エンドポイント
+app.get('/api/status', async (c) => {
+  return c.json({
+    success: true,
+    status: {
+      openai_configured: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here',
+      key_prefix: process.env.OPENAI_API_KEY?.substring(0, 10) + '...' || 'not_set',
+      environment: process.env.NODE_ENV || 'unknown',
+      timestamp: new Date().toISOString()
+    }
+  })
+})
+
 app.post('/api/auth/login', async (c) => {
   try {
     const { username, password } = await c.req.json()
@@ -77,12 +89,26 @@ app.post('/api/auth/register', async (c) => {
 
 app.post('/api/analysis/single', async (c) => {
   try {
+    // 環境変数デバッグ
+    console.log('Environment check:', {
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      keyPrefix: process.env.OPENAI_API_KEY?.substring(0, 10) + '...',
+      nodeEnv: process.env.NODE_ENV
+    });
+
     // フォームデータから画像ファイルを取得
     const formData = await c.req.formData()
     const imageFile = formData.get('image') as File
     
     if (!imageFile) {
       return c.json({ success: false, message: '画像ファイルが選択されていません' }, 400)
+    }
+
+    // OpenAI APIキーが設定されているかチェック
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+      console.log('OpenAI API Key not configured, using fallback data');
+      // フォールバック処理
+      throw new Error('OpenAI API Key not configured');
     }
 
     // 画像をBase64エンコード
