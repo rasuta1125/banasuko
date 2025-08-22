@@ -2,7 +2,8 @@
 
 <div align="center">
 
-![バナスコAI](https://img.shields.io/badge/バナスコAI-v2.0-blue?style=for-the-badge&logo=artificial-intelligence)
+![バナスコAI](https://img.shields.io/badge/バナスコAI-v2.1-blue?style=for-the-badge&logo=artificial-intelligence)
+![banaAI](https://img.shields.io/badge/banaAI-Vision-purple?style=for-the-badge&logo=brain)
 ![Hono](https://img.shields.io/badge/Hono-4.9.2-orange?style=for-the-badge&logo=typescript)
 ![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages-f38020?style=for-the-badge&logo=cloudflare)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)
@@ -10,6 +11,8 @@
 **次世代AI広告分析プラットフォーム**
 
 *最先端banaAI Vision × Cloudflare Edge × プロフェッショナルデザイン*
+
+**🌐 GitHub Repository**: [https://github.com/rasuta1125/banasuko](https://github.com/rasuta1125/banasuko)
 
 </div>
 
@@ -291,6 +294,46 @@ pm2 stop banasuko-ai       # 停止
 - [ ] **PWA化**: オフライン対応・インストール可能
 - [ ] **音声読み上げ**: アクセシビリティ向上
 - [ ] **キーボードショートカット**: パワーユーザー対応
+
+## 📦 GitHubリポジトリ
+
+### 🔗 **リポジトリ情報**
+- **URL**: [https://github.com/rasuta1125/banasuko](https://github.com/rasuta1125/banasuko)
+- **ブランチ**: `main` (最新のbanaAI版)
+- **ライセンス**: MIT License
+- **言語**: TypeScript (90%+)
+
+### 📊 **プロジェクト統計**
+- 🏗️ **総コード行数**: 7,000+ 行
+- 📁 **ファイル数**: 50+ ファイル
+- 🧩 **コンポーネント**: 8個のReactコンポーネント
+- 🔌 **API エンドポイント**: 25個
+- 📱 **ページ**: 7ページ（認証・分析・管理等）
+
+### 🚀 **クローン・実行方法**
+```bash
+# リポジトリクローン
+git clone https://github.com/rasuta1125/banasuko.git
+cd banasuko
+
+# 依存関係インストール
+npm install
+
+# 開発サーバー起動
+npm run dev
+
+# プロダクションビルド
+npm run build
+
+# Cloudflare Pagesデプロイ
+npm run deploy:prod
+```
+
+### 🏷️ **最新リリース**
+- **v2.1**: banaAI Vision完全統合版
+- **機能**: 完全なAI分析・認証・管理システム
+- **技術**: Hono + banaAI + Cloudflare Pages
+- **サイズ**: 825KB最適化済みWorkerバンドル
 
 ## 🤝 貢献・開発参加
 
