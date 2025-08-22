@@ -245,6 +245,9 @@ export const LoginPage = () => {
         <div class="absolute top-3/4 right-1/4 w-1 h-1 bg-cyber-pink rounded-full animate-ping opacity-30 delay-1000"></div>
         <div class="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-cyber-green rounded-full animate-ping opacity-25 delay-2000"></div>
       </div>
+
+      {/* Firebase Authentication JavaScript */}
+      <script src="/static/js/auth.js"></script>
     </div>
   )
 }

@@ -13,6 +13,8 @@ import { LoginPage } from './components/LoginPage'
 import { AnalysisPage } from './components/AnalysisPage'
 import { CopyGenerationPage } from './components/CopyGenerationPage'
 import { AdminDashboard } from './components/AdminDashboard'
+import { UserDashboard } from './components/UserDashboard'
+import { PlanManagement } from './components/PlanManagement'
 // OpenAI クライアント初期化をcontext内で行うため、インポートのみ
 import OpenAI from 'openai'
 import { ANALYSIS_PROMPT, AB_COMPARISON_PROMPT, COPY_GENERATION_PROMPT } from './services/openai'
@@ -45,6 +47,14 @@ app.get('/copy-generation', (c) => {
   return c.render(<CopyGenerationPage />)
 })
 
+app.get('/dashboard', (c) => {
+  return c.render(<UserDashboard />)
+})
+
+app.get('/plans', (c) => {
+  return c.render(<PlanManagement />)
+})
+
 // API エンドポイント
 app.get('/api/status', async (c) => {
   const k = c.env.OPENAI_API_KEY
@@ -75,6 +85,8 @@ import {
   handleLogout 
 } from './lib/authMiddleware'
 import { UserService } from './services/userService'
+import { UsageLimitService } from './services/usageLimitService'
+import { User } from './lib/firebase'
 
 // 認証ミドルウェア適用
 app.use('*', authMiddleware)
@@ -121,17 +133,15 @@ app.get('/api/auth/user', async (c) => {
   return c.json({ success: true, user })
 })
 
-// Firebase認証統合
-import { 
-  authMiddleware, 
-  requireAuth, 
-  handleDemoLogin, 
-  handleFirebaseLogin, 
-  handleFirebaseRegister, 
-  handleLogout 
-} from './lib/authMiddleware'
-import { UserService } from './services/userService'
-import { UsageLimitService } from './services/usageLimitService'
+// ユーザープロファイル取得（認証付き）
+app.get('/api/user/profile', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: 'ログインが必要です' }, 401)
+  }
+  
+  return c.json({ success: true, ...user })
+})
 
 // 使用制限チェック（基本）
 app.get('/api/usage/check', async (c) => {
@@ -213,20 +223,20 @@ app.post('/api/user/plan', async (c) => {
   }
   
   try {
-    const { newPlan } = await c.req.json()
+    const { plan } = await c.req.json()
     
-    if (!['free', 'basic', 'premium'].includes(newPlan)) {
+    if (!['free', 'basic', 'premium'].includes(plan)) {
       return c.json({ success: false, error: '無効なプランです' }, 400)
     }
     
     // プラン変更権限チェック
-    if (newPlan !== user.plan) {
-      await UserService.updateUserPlan(user.uid, newPlan)
+    if (plan !== user.plan) {
+      await UserService.updateUserPlan(user.uid, plan)
       
       return c.json({
         success: true,
-        message: `プランが${newPlan}に変更されました`,
-        user: { ...user, plan: newPlan }
+        message: `プランが${plan}に変更されました`,
+        user: { ...user, plan: plan }
       })
     } else {
       return c.json({
@@ -379,6 +389,18 @@ app.get('/api/admin/users/search', requireAdmin, async (c) => {
 })
 
 // OpenAI分析関数（Cloudflare Pages対応）
+async function compareImages(base64ImageA: string, base64ImageB: string): Promise<any> {
+  // This would use OpenAI API for A/B comparison
+  // For now, return mock data
+  throw new Error('OpenAI API not configured for comparison')
+}
+
+async function generateCopies(base64Image: string): Promise<any> {
+  // This would use OpenAI API for copy generation
+  // For now, return mock data
+  throw new Error('OpenAI API not configured for copy generation')
+}
+
 async function analyzeSingleImageWithClient(openai: OpenAI, base64Image: string): Promise<any> {
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -461,16 +483,10 @@ app.post('/api/analysis/single', async (c) => {
       throw new Error('OpenAI API Key not configured');
     }
 
-    // 画像をBase64エンコード
-    const base64Image = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1]
-        resolve(base64)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(imageFile)
-    })
+    // 画像をBase64エンコード（Cloudflare Workers対応）
+    const arrayBuffer = await imageFile.arrayBuffer()
+    const uint8Array = new Uint8Array(arrayBuffer)
+    const base64Image = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)))
 
     // OpenAI API を使用して画像分析（Cloudflare Pages対応）
     const openai = new OpenAI({ apiKey: c.env.OPENAI_API_KEY });
@@ -571,27 +587,15 @@ app.post('/api/analysis/compare', async (c) => {
       return c.json({ success: false, message: '2つの画像ファイルが必要です' }, 400)
     }
 
-    // 画像AをBase64エンコード
-    const base64ImageA = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1]
-        resolve(base64)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(imageFileA)
-    })
+    // 画像AをBase64エンコード（Cloudflare Workers対応）
+    const arrayBufferA = await imageFileA.arrayBuffer()
+    const uint8ArrayA = new Uint8Array(arrayBufferA)
+    const base64ImageA = btoa(String.fromCharCode.apply(null, Array.from(uint8ArrayA)))
 
-    // 画像BをBase64エンコード
-    const base64ImageB = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1]
-        resolve(base64)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(imageFileB)
-    })
+    // 画像BをBase64エンコード（Cloudflare Workers対応）
+    const arrayBufferB = await imageFileB.arrayBuffer()
+    const uint8ArrayB = new Uint8Array(arrayBufferB)
+    const base64ImageB = btoa(String.fromCharCode.apply(null, Array.from(uint8ArrayB)))
 
     // OpenAI API を使用してA/B比較分析
     const result = await compareImages(base64ImageA, base64ImageB)
@@ -706,16 +710,10 @@ app.post('/api/copy-generation', async (c) => {
       return c.json({ success: false, message: '画像ファイルが選択されていません' }, 400)
     }
 
-    // 画像をBase64エンコード
-    const base64Image = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1]
-        resolve(base64)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(imageFile)
-    })
+    // 画像をBase64エンコード（Cloudflare Workers対応）
+    const arrayBuffer = await imageFile.arrayBuffer()
+    const uint8Array = new Uint8Array(arrayBuffer)
+    const base64Image = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)))
 
     // OpenAI API を使用してコピー生成
     const result = await generateCopies(base64Image)
