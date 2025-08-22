@@ -1,13 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "banasuko",
   "compatibility_date": "2025-08-21",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
     "nodejs_compat"
   ]
   // "vars": {
-  //   "MY_VAR": "my-variable"
+  //   "OPENAI_API_KEY": "your_key_here"
   // },
   // "kv_namespaces": [
   //   {
