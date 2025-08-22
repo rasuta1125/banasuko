@@ -6,6 +6,7 @@ import { HomePage } from './components/HomePage'
 import { LoginPage } from './components/LoginPage'
 import { AnalysisPage } from './components/AnalysisPage'
 import { CopyGenerationPage } from './components/CopyGenerationPage'
+import { analyzeSingleImage, compareImages, generateCopies } from './services/openai'
 
 const app = new Hono()
 
@@ -76,9 +77,36 @@ app.post('/api/auth/register', async (c) => {
 
 app.post('/api/analysis/single', async (c) => {
   try {
-    // デモ分析結果を返す
-    await new Promise(resolve => setTimeout(resolve, 3000)) // 3秒待機
+    // フォームデータから画像ファイルを取得
+    const formData = await c.req.formData()
+    const imageFile = formData.get('image') as File
     
+    if (!imageFile) {
+      return c.json({ success: false, message: '画像ファイルが選択されていません' }, 400)
+    }
+
+    // 画像をBase64エンコード
+    const base64Image = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1]
+        resolve(base64)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(imageFile)
+    })
+
+    // OpenAI API を使用して画像分析
+    const result = await analyzeSingleImage(base64Image)
+    
+    return c.json({
+      success: true,
+      result: result
+    })
+  } catch (error) {
+    console.error('Analysis error:', error)
+    
+    // エラー時はフォールバック（デモデータ）を返す
     return c.json({
       success: true,
       result: {
@@ -108,19 +136,57 @@ app.post('/api/analysis/single', async (c) => {
             conversionRate: { current: 1.8, improved: 2.3, change: 27 },
             brandAwareness: { change: 34 }
           }
-        }
+        },
+        note: 'OpenAI API未接続のため、デモデータを表示しています'
       }
     })
-  } catch (error) {
-    return c.json({ success: false, message: 'AI分析でエラーが発生しました' }, 500)
   }
 })
 
 app.post('/api/analysis/compare', async (c) => {
   try {
-    // A/B比較のデモ結果を返す
-    await new Promise(resolve => setTimeout(resolve, 4000)) // 4秒待機
+    // フォームデータから2つの画像ファイルを取得
+    const formData = await c.req.formData()
+    const imageFileA = formData.get('imageA') as File
+    const imageFileB = formData.get('imageB') as File
     
+    if (!imageFileA || !imageFileB) {
+      return c.json({ success: false, message: '2つの画像ファイルが必要です' }, 400)
+    }
+
+    // 画像AをBase64エンコード
+    const base64ImageA = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1]
+        resolve(base64)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(imageFileA)
+    })
+
+    // 画像BをBase64エンコード
+    const base64ImageB = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1]
+        resolve(base64)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(imageFileB)
+    })
+
+    // OpenAI API を使用してA/B比較分析
+    const result = await compareImages(base64ImageA, base64ImageB)
+    
+    return c.json({
+      success: true,
+      result: result
+    })
+  } catch (error) {
+    console.error('AB comparison error:', error)
+    
+    // エラー時はフォールバック（デモデータ）を返す
     return c.json({
       success: true,
       result: {
@@ -166,19 +232,45 @@ app.post('/api/analysis/compare', async (c) => {
             roiImprovement: 18.2,
             cpaReduction: 19.5
           }
-        }
+        },
+        note: 'OpenAI API未接続のため、デモデータを表示しています'
       }
     })
-  } catch (error) {
-    return c.json({ success: false, message: 'A/B比較分析でエラーが発生しました' }, 500)
   }
 })
 
 app.post('/api/copy-generation', async (c) => {
   try {
-    // デモコピー生成結果を返す
-    await new Promise(resolve => setTimeout(resolve, 3500)) // 3.5秒待機
+    // フォームデータから画像ファイルを取得
+    const formData = await c.req.formData()
+    const imageFile = formData.get('image') as File
     
+    if (!imageFile) {
+      return c.json({ success: false, message: '画像ファイルが選択されていません' }, 400)
+    }
+
+    // 画像をBase64エンコード
+    const base64Image = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1]
+        resolve(base64)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(imageFile)
+    })
+
+    // OpenAI API を使用してコピー生成
+    const result = await generateCopies(base64Image)
+    
+    return c.json({
+      success: true,
+      result: result
+    })
+  } catch (error) {
+    console.error('Copy generation error:', error)
+    
+    // エラー時はフォールバック（デモデータ）を返す
     return c.json({
       success: true,
       result: {
@@ -221,11 +313,10 @@ app.post('/api/copy-generation', async (c) => {
             'CTAボタンに「限定価格で今すぐ始める」を使用',
             'サブコピーで信頼性を補完'
           ]
-        }
+        },
+        note: 'OpenAI API未接続のため、デモデータを表示しています'
       }
     })
-  } catch (error) {
-    return c.json({ success: false, message: 'コピー生成でエラーが発生しました' }, 500)
   }
 })
 

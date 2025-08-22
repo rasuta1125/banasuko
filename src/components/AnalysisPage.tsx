@@ -363,6 +363,323 @@ export const AnalysisPage = () => {
           </div>
         </div>
       </div>
+      
+      <script dangerouslySetInnerHTML={{
+        __html: `
+          document.addEventListener('DOMContentLoaded', function() {
+            let uploadedImage = null;
+            let uploadedImageA = null;
+            let uploadedImageB = null;
+            let isAnalyzing = false;
+            
+            // DOM Elements
+            const abModeCheckbox = document.getElementById('abMode');
+            const singleUpload = document.getElementById('singleUpload');
+            const abUpload = document.getElementById('abUpload');
+            const dropZone = document.getElementById('dropZone');
+            const imageUpload = document.getElementById('imageUpload');
+            const imagePreview = document.getElementById('imagePreview');
+            const previewImage = document.getElementById('previewImage');
+            const imageName = document.getElementById('imageName');
+            const analyzeButton = document.getElementById('analyzeButton');
+            const analyzeButtonText = document.getElementById('analyzeButtonText');
+            const analyzeSpinner = document.getElementById('analyzeSpinner');
+            const resultsSection = document.getElementById('resultsSection');
+            const singleResults = document.getElementById('singleResults');
+            const abResults = document.getElementById('abResults');
+            
+            // A/B mode toggle
+            abModeCheckbox.addEventListener('change', function() {
+              if (this.checked) {
+                singleUpload.classList.add('hidden');
+                abUpload.classList.remove('hidden');
+                updateAnalyzeButton();
+              } else {
+                singleUpload.classList.remove('hidden');
+                abUpload.classList.add('hidden');
+                updateAnalyzeButton();
+              }
+            });
+            
+            // Single image upload
+            dropZone.addEventListener('click', () => imageUpload.click());
+            dropZone.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              dropZone.classList.add('border-cyber-purple');
+            });
+            dropZone.addEventListener('dragleave', (e) => {
+              e.preventDefault();
+              dropZone.classList.remove('border-cyber-purple');
+            });
+            dropZone.addEventListener('drop', (e) => {
+              e.preventDefault();
+              dropZone.classList.remove('border-cyber-purple');
+              const files = e.dataTransfer.files;
+              if (files.length > 0) {
+                handleImageUpload(files[0]);
+              }
+            });
+            
+            imageUpload.addEventListener('change', (e) => {
+              if (e.target.files.length > 0) {
+                handleImageUpload(e.target.files[0]);
+              }
+            });
+            
+            function handleImageUpload(file) {
+              if (!file.type.startsWith('image/')) {
+                alert('画像ファイルを選択してください。');
+                return;
+              }
+              
+              if (file.size > 10 * 1024 * 1024) {
+                alert('ファイルサイズは10MB以下にしてください。');
+                return;
+              }
+              
+              uploadedImage = file;
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                imageName.textContent = file.name;
+                imagePreview.classList.remove('hidden');
+                updateAnalyzeButton();
+              };
+              reader.readAsDataURL(file);
+            }
+            
+            // A/B upload handlers
+            setupABUpload('A');
+            setupABUpload('B');
+            
+            function setupABUpload(pattern) {
+              const dropZone = document.getElementById('dropZone' + pattern);
+              const imageUpload = document.getElementById('imageUpload' + pattern);
+              const imagePreview = document.getElementById('imagePreview' + pattern);
+              const previewImage = document.getElementById('previewImage' + pattern);
+              
+              dropZone.addEventListener('click', () => imageUpload.click());
+              dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
+              });
+              dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
+              });
+              dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                  handleABImageUpload(files[0], pattern);
+                }
+              });
+              
+              imageUpload.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                  handleABImageUpload(e.target.files[0], pattern);
+                }
+              });
+            }
+            
+            function handleABImageUpload(file, pattern) {
+              if (!file.type.startsWith('image/')) {
+                alert('画像ファイルを選択してください。');
+                return;
+              }
+              
+              if (file.size > 10 * 1024 * 1024) {
+                alert('ファイルサイズは10MB以下にしてください。');
+                return;
+              }
+              
+              if (pattern === 'A') {
+                uploadedImageA = file;
+              } else {
+                uploadedImageB = file;
+              }
+              
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                document.getElementById('previewImage' + pattern).src = e.target.result;
+                document.getElementById('imagePreview' + pattern).classList.remove('hidden');
+                updateAnalyzeButton();
+              };
+              reader.readAsDataURL(file);
+            }
+            
+            function updateAnalyzeButton() {
+              if (isAnalyzing) return;
+              
+              if (abModeCheckbox.checked) {
+                analyzeButton.disabled = !uploadedImageA || !uploadedImageB;
+              } else {
+                analyzeButton.disabled = !uploadedImage;
+              }
+            }
+            
+            // Analysis button handler
+            analyzeButton.addEventListener('click', async function() {
+              if (isAnalyzing) return;
+              
+              isAnalyzing = true;
+              analyzeButton.disabled = true;
+              analyzeButtonText.classList.add('hidden');
+              analyzeSpinner.classList.remove('hidden');
+              
+              try {
+                if (abModeCheckbox.checked) {
+                  await performABAnalysis();
+                } else {
+                  await performSingleAnalysis();
+                }
+              } catch (error) {
+                console.error('Analysis error:', error);
+                alert('分析中にエラーが発生しました。もう一度お試しください。');
+              } finally {
+                isAnalyzing = false;
+                analyzeButton.disabled = false;
+                analyzeButtonText.classList.remove('hidden');
+                analyzeSpinner.classList.add('hidden');
+                updateAnalyzeButton();
+              }
+            });
+            
+            async function performSingleAnalysis() {
+              const formData = new FormData();
+              formData.append('image', uploadedImage);
+              
+              const response = await fetch('/api/analysis/single', {
+                method: 'POST',
+                body: formData
+              });
+              
+              const data = await response.json();
+              
+              if (data.success) {
+                displaySingleResults(data.result);
+              } else {
+                throw new Error(data.message || '分析に失敗しました');
+              }
+            }
+            
+            async function performABAnalysis() {
+              const formData = new FormData();
+              formData.append('imageA', uploadedImageA);
+              formData.append('imageB', uploadedImageB);
+              
+              const response = await fetch('/api/analysis/compare', {
+                method: 'POST',
+                body: formData
+              });
+              
+              const data = await response.json();
+              
+              if (data.success) {
+                displayABResults(data.result);
+              } else {
+                throw new Error(data.message || 'A/B比較分析に失敗しました');
+              }
+            }
+            
+            function displaySingleResults(result) {
+              resultsSection.classList.remove('hidden');
+              singleResults.classList.remove('hidden');
+              abResults.classList.add('hidden');
+              
+              // Update total score
+              document.getElementById('totalScore').textContent = result.totalScore;
+              document.getElementById('scoreLevel').textContent = result.level;
+              
+              // Update individual scores
+              const scoresContainer = document.getElementById('individualScores');
+              scoresContainer.innerHTML = '';
+              
+              for (const [key, scoreData] of Object.entries(result.scores)) {
+                const scoreDiv = document.createElement('div');
+                scoreDiv.className = 'bg-navy-700/50 border border-gray-600 rounded-lg p-3 text-center';
+                scoreDiv.innerHTML = \`
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs text-gray-400">\${scoreData.label}</span>
+                    <span class="text-lg font-bold" style="color: \${scoreData.color}">\${scoreData.score}</span>
+                  </div>
+                  <div class="w-full bg-gray-700 rounded-full h-2">
+                    <div class="h-2 rounded-full" style="width: \${scoreData.score}%; background-color: \${scoreData.color}"></div>
+                  </div>
+                \`;
+                scoresContainer.appendChild(scoreDiv);
+              }
+              
+              // Update target match
+              document.getElementById('targetMatch').textContent = result.analysis.targetMatch + '%';
+              
+              // Update strengths
+              const strengthsList = document.getElementById('strengthsList');
+              strengthsList.innerHTML = '';
+              result.analysis.strengths.forEach(strength => {
+                const li = document.createElement('li');
+                li.innerHTML = '<i class="fas fa-check text-cyber-green mr-2"></i>' + strength;
+                strengthsList.appendChild(li);
+              });
+              
+              // Update improvements
+              const improvementsList = document.getElementById('improvementsList');
+              improvementsList.innerHTML = '';
+              result.analysis.improvements.forEach(improvement => {
+                const li = document.createElement('li');
+                li.innerHTML = '<i class="fas fa-arrow-up text-cyber-orange mr-2"></i>' + improvement;
+                improvementsList.appendChild(li);
+              });
+              
+              // Update performance metrics
+              const performanceContainer = document.getElementById('performanceMetrics');
+              performanceContainer.innerHTML = \`
+                <div class="bg-gradient-to-r from-green-600/20 to-green-400/10 border border-green-400/30 rounded-lg p-4 text-center">
+                  <div class="text-lg font-bold text-green-400">\${result.analysis.performance.clickRate.improved}%</div>
+                  <div class="text-xs text-gray-400">クリック率（+\${result.analysis.performance.clickRate.change}%）</div>
+                </div>
+                <div class="bg-gradient-to-r from-blue-600/20 to-blue-400/10 border border-blue-400/30 rounded-lg p-4 text-center">
+                  <div class="text-lg font-bold text-blue-400">\${result.analysis.performance.conversionRate.improved}%</div>
+                  <div class="text-xs text-gray-400">コンバージョン率（+\${result.analysis.performance.conversionRate.change}%）</div>
+                </div>
+                <div class="bg-gradient-to-r from-purple-600/20 to-purple-400/10 border border-purple-400/30 rounded-lg p-4 text-center">
+                  <div class="text-lg font-bold text-purple-400">+\${result.analysis.performance.brandAwareness.change}%</div>
+                  <div class="text-xs text-gray-400">ブランド認知向上</div>
+                </div>
+              \`;
+              
+              // Show note if using demo data
+              if (result.note) {
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'mt-4 p-3 bg-yellow-600/20 border border-yellow-400/30 rounded-lg text-center';
+                noteDiv.innerHTML = '<i class="fas fa-info-circle mr-2 text-yellow-400"></i>' + result.note;
+                performanceContainer.parentElement.appendChild(noteDiv);
+              }
+              
+              // Scroll to results
+              resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            function displayABResults(result) {
+              resultsSection.classList.remove('hidden');
+              abResults.classList.remove('hidden');
+              singleResults.classList.add('hidden');
+              
+              // Show note if using demo data
+              if (result.note) {
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'mb-6 p-3 bg-yellow-600/20 border border-yellow-400/30 rounded-lg text-center';
+                noteDiv.innerHTML = '<i class="fas fa-info-circle mr-2 text-yellow-400"></i>' + result.note;
+                document.querySelector('#abResults .bg-navy-800\\/50').prepend(noteDiv);
+              }
+              
+              // Scroll to results
+              resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          });
+        `
+      }} />
     </div>
   )
 }

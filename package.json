@@ -13,7 +13,8 @@
     "start": "npm run build && npm run dev:sandbox"
   },
   "dependencies": {
-    "hono": "^4.9.2"
+    "hono": "^4.9.2",
+    "openai": "^5.15.0"
   },
   "devDependencies": {
     "@hono/vite-build": "^1.2.0",

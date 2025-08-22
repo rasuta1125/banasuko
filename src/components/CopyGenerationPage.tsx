@@ -306,6 +306,206 @@ export const CopyGenerationPage = () => {
           </div>
         </div>
       </div>
+      
+      <script dangerouslySetInnerHTML={{
+        __html: `
+          document.addEventListener('DOMContentLoaded', function() {
+            let uploadedImage = null;
+            let isGenerating = false;
+            
+            // DOM Elements
+            const dropZone = document.getElementById('copyDropZone');
+            const imageUpload = document.getElementById('copyImageUpload');
+            const imagePreview = document.getElementById('copyImagePreview');
+            const previewImage = document.getElementById('copyPreviewImage');
+            const generateButton = document.getElementById('generateButton');
+            const generateButtonText = document.getElementById('generateButtonText');
+            const generateSpinner = document.getElementById('generateSpinner');
+            const resultsSection = document.getElementById('copyResultsSection');
+            
+            // Image upload handlers
+            if (dropZone && imageUpload) {
+              dropZone.addEventListener('click', () => imageUpload.click());
+              dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-cyber-orange');
+              });
+              dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-cyber-orange');
+              });
+              dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-cyber-orange');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                  handleImageUpload(files[0]);
+                }
+              });
+              
+              imageUpload.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                  handleImageUpload(e.target.files[0]);
+                }
+              });
+            }
+            
+            function handleImageUpload(file) {
+              if (!file.type.startsWith('image/')) {
+                alert('画像ファイルを選択してください。');
+                return;
+              }
+              
+              if (file.size > 10 * 1024 * 1024) {
+                alert('ファイルサイズは10MB以下にしてください。');
+                return;
+              }
+              
+              uploadedImage = file;
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                if (previewImage && imagePreview) {
+                  previewImage.src = e.target.result;
+                  imagePreview.classList.remove('hidden');
+                  updateGenerateButton();
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+            
+            function updateGenerateButton() {
+              if (generateButton && !isGenerating) {
+                generateButton.disabled = !uploadedImage;
+              }
+            }
+            
+            // Generate button handler
+            if (generateButton) {
+              generateButton.addEventListener('click', async function() {
+                if (isGenerating || !uploadedImage) return;
+                
+                isGenerating = true;
+                generateButton.disabled = true;
+                if (generateButtonText) generateButtonText.classList.add('hidden');
+                if (generateSpinner) generateSpinner.classList.remove('hidden');
+                
+                try {
+                  await performCopyGeneration();
+                } catch (error) {
+                  console.error('Copy generation error:', error);
+                  alert('コピー生成中にエラーが発生しました。もう一度お試しください。');
+                } finally {
+                  isGenerating = false;
+                  generateButton.disabled = false;
+                  if (generateButtonText) generateButtonText.classList.remove('hidden');
+                  if (generateSpinner) generateSpinner.classList.add('hidden');
+                  updateGenerateButton();
+                }
+              });
+            }
+            
+            async function performCopyGeneration() {
+              const formData = new FormData();
+              formData.append('image', uploadedImage);
+              
+              const response = await fetch('/api/copy-generation', {
+                method: 'POST',
+                body: formData
+              });
+              
+              const data = await response.json();
+              
+              if (data.success) {
+                displayCopyResults(data.result);
+              } else {
+                throw new Error(data.message || 'コピー生成に失敗しました');
+              }
+            }
+            
+            function displayCopyResults(result) {
+              if (resultsSection) {
+                resultsSection.classList.remove('hidden');
+                
+                // Clear existing results
+                const existingResults = resultsSection.querySelector('.copy-results-container');
+                if (existingResults) {
+                  existingResults.remove();
+                }
+                
+                // Create results container
+                const resultsContainer = document.createElement('div');
+                resultsContainer.className = 'copy-results-container bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-orange/20 p-8 mb-8 animate-slide-up';
+                
+                resultsContainer.innerHTML = \`
+                  <h3 class="text-2xl font-semibold text-cyber-orange mb-6 text-center">
+                    <i class="fas fa-magic mr-2"></i>生成されたコピー
+                  </h3>
+                  
+                  \${result.note ? \`
+                    <div class="mb-6 p-3 bg-yellow-600/20 border border-yellow-400/30 rounded-lg text-center">
+                      <i class="fas fa-info-circle mr-2 text-yellow-400"></i>\${result.note}
+                    </div>
+                  \` : ''}
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    \${result.copies.map(copy => \`
+                      <div class="bg-navy-700/50 border border-gray-600/50 rounded-xl p-6 hover:border-cyber-orange/30 transition-colors">
+                        <div class="flex justify-between items-start mb-4">
+                          <h4 class="text-lg font-semibold text-cyber-orange">\${copy.type}</h4>
+                          <span class="bg-gradient-to-r from-cyber-green/20 to-green-400/10 border border-cyber-green/30 px-3 py-1 rounded-full text-xs font-bold text-cyber-green">
+                            効果度: \${copy.effectiveness}%
+                          </span>
+                        </div>
+                        <p class="text-white text-lg mb-4 leading-relaxed">\${copy.text}</p>
+                        <p class="text-gray-400 text-sm">\${copy.reasoning}</p>
+                        <button class="mt-3 px-4 py-2 bg-cyber-orange/20 border border-cyber-orange/30 rounded-lg text-cyber-orange text-sm hover:bg-cyber-orange/30 transition-colors" onclick="navigator.clipboard.writeText('\${copy.text}'); this.textContent='コピー済み!'; setTimeout(() => this.textContent='コピー', 2000)">
+                          <i class="fas fa-copy mr-2"></i>コピー
+                        </button>
+                      </div>
+                    \`).join('')}
+                  </div>
+                  
+                  <div class="bg-navy-700/30 rounded-xl p-6">
+                    <h4 class="text-lg font-semibold text-cyber-green mb-4">
+                      <i class="fas fa-chart-line mr-2"></i>分析サマリー
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div class="text-center">
+                        <div class="text-2xl font-bold text-cyber-green">\${result.analysis.overallScore}</div>
+                        <p class="text-gray-400 text-sm">総合スコア</p>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-2xl font-bold text-cyber-blue">\${result.analysis.industryMatch}%</div>
+                        <p class="text-gray-400 text-sm">業界適合度</p>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-lg font-semibold text-cyber-pink">\${result.analysis.targetAudience}</div>
+                        <p class="text-gray-400 text-sm">想定ターゲット</p>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                      <h5 class="text-md font-semibold text-cyber-orange mb-3">実装推奨事項</h5>
+                      <ul class="space-y-2">
+                        \${result.analysis.recommendations.map(rec => \`
+                          <li class="text-gray-300 text-sm">
+                            <i class="fas fa-check-circle text-cyber-green mr-2"></i>\${rec}
+                          </li>
+                        \`).join('')}
+                      </ul>
+                    </div>
+                  </div>
+                \`;
+                
+                resultsSection.appendChild(resultsContainer);
+                
+                // Scroll to results
+                resultsContainer.scrollIntoView({ behavior: 'smooth' });
+              }
+            }
+          });
+        `
+      }} />
     </div>
   )
 }
