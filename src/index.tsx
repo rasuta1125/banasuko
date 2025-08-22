@@ -64,41 +64,74 @@ app.get('/api/status', async (c) => {
   })
 })
 
+// Firebase認証統合
+import { 
+  authMiddleware, 
+  requireAuth, 
+  handleDemoLogin, 
+  handleFirebaseLogin, 
+  handleFirebaseRegister, 
+  handleLogout 
+} from './lib/authMiddleware'
+import { UserService } from './services/userService'
+
+// 認証ミドルウェア適用
+app.use('*', authMiddleware)
+
+// デモログイン（既存）
+app.post('/api/auth/demo-login', handleDemoLogin)
+
+// Firebase認証ログイン
 app.post('/api/auth/login', async (c) => {
   try {
-    const { username, password } = await c.req.json()
+    const body = await c.req.json()
     
-    // デモアカウント認証
-    if (username === 'demo' && password === 'demo123') {
+    // デモアカウントかFirebase認証かを判定
+    if (body.username === 'demo' && body.password === 'demo123') {
+      return handleDemoLogin(c)
+    } else if (body.email && body.password) {
+      // Firebase認証
+      return handleFirebaseLogin(c)
+    } else {
       return c.json({ 
-        success: true, 
-        user: { 
-          username: 'demo', 
-          name: 'デモユーザー',
-          email: 'demo@example.com'
-        },
-        token: 'demo-token-123'
-      })
+        success: false, 
+        error: 'メールアドレス・パスワードまたはデモアカウント情報を入力してください' 
+      }, 400)
     }
-    
-    return c.json({ success: false, message: 'ログイン情報が正しくありません' }, 401)
   } catch (error) {
-    return c.json({ success: false, message: 'サーバーエラーが発生しました' }, 500)
+    console.error('Login error:', error)
+    return c.json({ success: false, error: 'ログインに失敗しました' }, 500)
   }
 })
 
-app.post('/api/auth/register', async (c) => {
+// Firebase認証登録
+app.post('/api/auth/register', handleFirebaseRegister)
+
+// ログアウト
+app.post('/api/auth/logout', handleLogout)
+
+// ユーザー情報取得
+app.get('/api/auth/user', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: 'ログインが必要です' }, 401)
+  }
+  
+  return c.json({ success: true, user })
+})
+
+// 使用制限チェック
+app.get('/api/usage/check', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: 'ログインが必要です' }, 401)
+  }
+  
   try {
-    const { username, email, password } = await c.req.json()
-    
-    // 簡単な登録処理（実際の実装ではデータベースに保存）
-    return c.json({ 
-      success: true, 
-      message: 'アカウントが作成されました',
-      user: { username, email }
-    })
+    const usageInfo = await UserService.checkUsageLimit(user.uid)
+    return c.json({ success: true, ...usageInfo })
   } catch (error) {
-    return c.json({ success: false, message: 'サーバーエラーが発生しました' }, 500)
+    return c.json({ success: false, error: '使用制限チェックに失敗しました' }, 500)
   }
 })
 
@@ -140,6 +173,24 @@ async function analyzeSingleImageWithClient(openai: OpenAI, base64Image: string)
 
 app.post('/api/analysis/single', async (c) => {
   try {
+    // ユーザー認証チェック
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ success: false, error: 'ログインが必要です' }, 401)
+    }
+
+    // 使用制限チェック（デモユーザーは除外）
+    if (user.uid !== 'demo-user-123') {
+      const usageCheck = await UserService.checkUsageLimit(user.uid)
+      if (!usageCheck.canUse) {
+        return c.json({ 
+          success: false, 
+          error: '月間使用回数の上限に達しました。プランをアップグレードしてください。',
+          usageInfo: usageCheck
+        }, 429)
+      }
+    }
+
     // 環境変数デバッグ（Cloudflare Pages対応）
     console.log('Environment check:', {
       hasOpenAIKey_process: !!process.env.OPENAI_API_KEY,
@@ -180,12 +231,32 @@ app.post('/api/analysis/single', async (c) => {
     const openai = new OpenAI({ apiKey: c.env.OPENAI_API_KEY });
     const result = await analyzeSingleImageWithClient(openai, base64Image)
     
+    // 使用回数を増加（デモユーザーは除外）
+    if (user.uid !== 'demo-user-123') {
+      await UserService.incrementUsageCount(user.uid, 'single_analysis')
+    }
+    
     return c.json({
       success: true,
-      result: result
+      result: result,
+      user: {
+        plan: user.plan,
+        usageCount: user.uid !== 'demo-user-123' ? user.usageCount + 1 : user.usageCount,
+        maxUsage: user.maxUsage
+      }
     })
   } catch (error) {
     console.error('Analysis error:', error)
+    const user = c.get('user')
+    
+    // 使用回数を増加（エラーでもカウント、デモユーザーは除外）
+    if (user && user.uid !== 'demo-user-123') {
+      try {
+        await UserService.incrementUsageCount(user.uid, 'single_analysis')
+      } catch (usageError) {
+        console.error('Usage increment error:', usageError)
+      }
+    }
     
     // エラー時はフォールバック（デモデータ）を返す
     return c.json({
@@ -226,6 +297,24 @@ app.post('/api/analysis/single', async (c) => {
 
 app.post('/api/analysis/compare', async (c) => {
   try {
+    // ユーザー認証チェック
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ success: false, error: 'ログインが必要です' }, 401)
+    }
+
+    // 使用制限チェック（デモユーザーは除外）
+    if (user.uid !== 'demo-user-123') {
+      const usageCheck = await UserService.checkUsageLimit(user.uid)
+      if (!usageCheck.canUse) {
+        return c.json({ 
+          success: false, 
+          error: '月間使用回数の上限に達しました。プランをアップグレードしてください。',
+          usageInfo: usageCheck
+        }, 429)
+      }
+    }
+
     // フォームデータから2つの画像ファイルを取得
     const formData = await c.req.formData()
     const imageFileA = formData.get('imageA') as File
@@ -260,12 +349,32 @@ app.post('/api/analysis/compare', async (c) => {
     // OpenAI API を使用してA/B比較分析
     const result = await compareImages(base64ImageA, base64ImageB)
     
+    // 使用回数を増加（デモユーザーは除外）
+    if (user.uid !== 'demo-user-123') {
+      await UserService.incrementUsageCount(user.uid, 'ab_comparison')
+    }
+    
     return c.json({
       success: true,
-      result: result
+      result: result,
+      user: {
+        plan: user.plan,
+        usageCount: user.uid !== 'demo-user-123' ? user.usageCount + 1 : user.usageCount,
+        maxUsage: user.maxUsage
+      }
     })
   } catch (error) {
     console.error('AB comparison error:', error)
+    const user = c.get('user')
+    
+    // 使用回数を増加（エラーでもカウント、デモユーザーは除外）
+    if (user && user.uid !== 'demo-user-123') {
+      try {
+        await UserService.incrementUsageCount(user.uid, 'ab_comparison')
+      } catch (usageError) {
+        console.error('Usage increment error:', usageError)
+      }
+    }
     
     // エラー時はフォールバック（デモデータ）を返す
     return c.json({
@@ -322,6 +431,24 @@ app.post('/api/analysis/compare', async (c) => {
 
 app.post('/api/copy-generation', async (c) => {
   try {
+    // ユーザー認証チェック
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ success: false, error: 'ログインが必要です' }, 401)
+    }
+
+    // 使用制限チェック（デモユーザーは除外）
+    if (user.uid !== 'demo-user-123') {
+      const usageCheck = await UserService.checkUsageLimit(user.uid)
+      if (!usageCheck.canUse) {
+        return c.json({ 
+          success: false, 
+          error: '月間使用回数の上限に達しました。プランをアップグレードしてください。',
+          usageInfo: usageCheck
+        }, 429)
+      }
+    }
+
     // フォームデータから画像ファイルを取得
     const formData = await c.req.formData()
     const imageFile = formData.get('image') as File
@@ -344,12 +471,32 @@ app.post('/api/copy-generation', async (c) => {
     // OpenAI API を使用してコピー生成
     const result = await generateCopies(base64Image)
     
+    // 使用回数を増加（デモユーザーは除外）
+    if (user.uid !== 'demo-user-123') {
+      await UserService.incrementUsageCount(user.uid, 'copy_generation')
+    }
+    
     return c.json({
       success: true,
-      result: result
+      result: result,
+      user: {
+        plan: user.plan,
+        usageCount: user.uid !== 'demo-user-123' ? user.usageCount + 1 : user.usageCount,
+        maxUsage: user.maxUsage
+      }
     })
   } catch (error) {
     console.error('Copy generation error:', error)
+    const user = c.get('user')
+    
+    // 使用回数を増加（エラーでもカウント、デモユーザーは除外）
+    if (user && user.uid !== 'demo-user-123') {
+      try {
+        await UserService.incrementUsageCount(user.uid, 'copy_generation')
+      } catch (usageError) {
+        console.error('Usage increment error:', usageError)
+      }
+    }
     
     // エラー時はフォールバック（デモデータ）を返す
     return c.json({

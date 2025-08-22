@@ -13,6 +13,7 @@
     "start": "npm run build && npm run dev:sandbox"
   },
   "dependencies": {
+    "firebase": "^12.1.0",
     "hono": "^4.9.2",
     "openai": "^5.15.0"
   },
