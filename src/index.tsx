@@ -12,6 +12,7 @@ import { HomePage } from './components/HomePage'
 import { LoginPage } from './components/LoginPage'
 import { AnalysisPage } from './components/AnalysisPage'
 import { CopyGenerationPage } from './components/CopyGenerationPage'
+import { AdminDashboard } from './components/AdminDashboard'
 // OpenAI クライアント初期化をcontext内で行うため、インポートのみ
 import OpenAI from 'openai'
 import { ANALYSIS_PROMPT, AB_COMPARISON_PROMPT, COPY_GENERATION_PROMPT } from './services/openai'
@@ -236,6 +237,144 @@ app.post('/api/user/plan', async (c) => {
     
   } catch (error) {
     return c.json({ success: false, error: 'プラン変更に失敗しました' }, 500)
+  }
+})
+
+// 管理者用API
+import { AdminService } from './services/adminService'
+
+// 管理者権限チェックミドルウェア
+const requireAdmin = async (c: any, next: any) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: '管理者ログインが必要です' }, 401)
+  }
+
+  // デモ管理者または実際の管理者チェック
+  if (user.uid === 'demo-user-123' || await AdminService.checkAdminAccess(user.uid)) {
+    return next()
+  }
+
+  return c.json({ success: false, error: '管理者権限が必要です' }, 403)
+}
+
+// 管理画面ルート
+app.get('/admin', requireAdmin, (c) => {
+  return c.render(<AdminDashboard />)
+})
+
+// 管理者ダッシュボード統計
+app.get('/api/admin/stats', requireAdmin, async (c) => {
+  try {
+    const stats = await AdminService.getDashboardStats()
+    return c.json({ success: true, data: stats })
+  } catch (error) {
+    return c.json({ success: false, error: 'ダッシュボード統計取得に失敗しました' }, 500)
+  }
+})
+
+// ユーザー一覧取得
+app.get('/api/admin/users', requireAdmin, async (c) => {
+  try {
+    const page = parseInt(c.req.query('page') || '1')
+    const limit = parseInt(c.req.query('limit') || '10')
+    const planFilter = c.req.query('plan') as User['plan'] | undefined
+
+    const result = await AdminService.getUsersList(limit, null, planFilter)
+    return c.json({ success: true, data: result })
+  } catch (error) {
+    return c.json({ success: false, error: 'ユーザー一覧取得に失敗しました' }, 500)
+  }
+})
+
+// ユーザー更新
+app.put('/api/admin/users/:uid', requireAdmin, async (c) => {
+  try {
+    const uid = c.req.param('uid')
+    const updates = await c.req.json()
+
+    await AdminService.updateUser(uid, updates)
+    return c.json({ success: true, message: 'ユーザー情報を更新しました' })
+  } catch (error) {
+    return c.json({ success: false, error: 'ユーザー更新に失敗しました' }, 500)
+  }
+})
+
+// ユーザー削除（論理削除）
+app.delete('/api/admin/users/:uid', requireAdmin, async (c) => {
+  try {
+    const uid = c.req.param('uid')
+    await AdminService.deactivateUser(uid)
+    return c.json({ success: true, message: 'ユーザーを無効化しました' })
+  } catch (error) {
+    return c.json({ success: false, error: 'ユーザー削除に失敗しました' }, 500)
+  }
+})
+
+// 最近のアクティビティ取得
+app.get('/api/admin/activity', requireAdmin, async (c) => {
+  try {
+    const activity = await AdminService.getRecentActivity()
+    return c.json({ success: true, data: activity })
+  } catch (error) {
+    return c.json({ success: false, error: 'アクティビティ取得に失敗しました' }, 500)
+  }
+})
+
+// 全ユーザー使用回数リセット
+app.post('/api/admin/reset-usage', requireAdmin, async (c) => {
+  try {
+    const result = await AdminService.resetAllUsageCounts()
+    return c.json({ 
+      success: true, 
+      message: `使用回数をリセットしました (成功: ${result.success}, 失敗: ${result.failed})`
+    })
+  } catch (error) {
+    return c.json({ success: false, error: '使用回数リセットに失敗しました' }, 500)
+  }
+})
+
+// データエクスポート
+app.get('/api/admin/export', requireAdmin, async (c) => {
+  try {
+    const data = await AdminService.exportUserData()
+    
+    // CSVファイルとして返す
+    c.header('Content-Type', 'application/csv')
+    c.header('Content-Disposition', 'attachment; filename=users_export.csv')
+    
+    // CSV形式に変換
+    const csvHeader = 'UID,ユーザー名,メールアドレス,プラン,使用回数,最大使用数,登録日,最終ログイン,アクティブ\n'
+    const csvRows = data.users.map(user => [
+      user.uid,
+      user.username,
+      user.email,
+      user.plan,
+      user.usageCount,
+      user.maxUsage,
+      user.createdAt.toDate().toISOString(),
+      user.lastLoginAt.toDate().toISOString(),
+      user.isActive
+    ].join(','))
+    
+    return c.text(csvHeader + csvRows.join('\n'))
+  } catch (error) {
+    return c.json({ success: false, error: 'データエクスポートに失敗しました' }, 500)
+  }
+})
+
+// ユーザー検索
+app.get('/api/admin/users/search', requireAdmin, async (c) => {
+  try {
+    const searchTerm = c.req.query('q') || ''
+    if (searchTerm.length < 2) {
+      return c.json({ success: false, error: '検索語句は2文字以上入力してください' }, 400)
+    }
+
+    const users = await AdminService.searchUsers(searchTerm)
+    return c.json({ success: true, data: users })
+  } catch (error) {
+    return c.json({ success: false, error: 'ユーザー検索に失敗しました' }, 500)
   }
 })
 
