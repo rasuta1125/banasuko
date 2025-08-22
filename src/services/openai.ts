@@ -20,9 +20,9 @@ export async function encodeImage(file: File): Promise<string> {
   })
 }
 
-// バナー分析用プロンプト
+// バナー分析用プロンプト（banaAI専用）
 export const ANALYSIS_PROMPT = `
-あなたは広告バナー分析の専門家です。アップロードされたバナー画像を以下の5項目で分析し、JSONフォーマットで結果を返してください。
+あなたはbanaAI搭載の広告バナー分析エキスパートです。アップロードされたバナー画像を以下の5項目で詳細分析し、JSONフォーマットで結果を返してください。
 
 ## 分析項目
 1. **瞬間伝達力 (impact)**: 3秒以内にメッセージが理解できるか (0-100点)
@@ -72,9 +72,9 @@ export const ANALYSIS_PROMPT = `
 必ず有効なJSONのみを返し、説明文は含めないでください。
 `
 
-// A/B比較分析用プロンプト
+// A/B比較分析用プロンプト（banaAI専用）
 export const AB_COMPARISON_PROMPT = `
-あなたは広告バナーA/B比較分析の専門家です。2つのバナー画像を比較分析し、どちらが効果的かをJSONフォーマットで返してください。
+あなたはbanaAI搭載の広告バナーA/B比較分析エキスパートです。2つのバナー画像を高精度で比較分析し、どちらが効果的かをJSONフォーマットで返してください。
 
 ## 分析項目
 1. **瞬間伝達力 (impact)**: 3秒以内にメッセージが理解できるか
@@ -131,9 +131,9 @@ export const AB_COMPARISON_PROMPT = `
 必ず有効なJSONのみを返してください。
 `
 
-// コピー生成用プロンプト
+// コピー生成用プロンプト（banaAI専用）
 export const COPY_GENERATION_PROMPT = `
-アップロードされたバナー画像を分析し、効果的な広告コピーを4種類生成してください。
+banaAI搭載の広告コピー生成システムとして、アップロードされたバナー画像を詳細分析し、効果的な広告コピーを4種類生成してください。
 
 ## 生成するコピータイプ
 1. **メインコピー**: 主要メッセージ (20-30文字)
@@ -220,7 +220,7 @@ export async function analyzeSingleImage(base64Image: string, apiKey?: string): 
 
     const content = response.choices[0]?.message?.content
     if (!content) {
-      throw new Error('OpenAI API response is empty')
+      throw new Error('banaAI API response is empty')
     }
 
     // JSONパースを試行
@@ -229,10 +229,10 @@ export async function analyzeSingleImage(base64Image: string, apiKey?: string): 
     } catch (parseError) {
       console.error('JSON parse error:', parseError)
       console.log('Raw response:', content)
-      throw new Error('OpenAI API returned invalid JSON')
+      throw new Error('banaAI API returned invalid JSON')
     }
   } catch (error) {
-    console.error('OpenAI API error:', error)
+    console.error('banaAI API error:', error)
     throw error
   }
 }
@@ -273,7 +273,7 @@ export async function compareImages(base64ImageA: string, base64ImageB: string, 
 
     const content = response.choices[0]?.message?.content
     if (!content) {
-      throw new Error('OpenAI API response is empty')
+      throw new Error('banaAI API response is empty')
     }
 
     try {
@@ -281,10 +281,10 @@ export async function compareImages(base64ImageA: string, base64ImageB: string, 
     } catch (parseError) {
       console.error('JSON parse error:', parseError)
       console.log('Raw response:', content)
-      throw new Error('OpenAI API returned invalid JSON')
+      throw new Error('banaAI API returned invalid JSON')
     }
   } catch (error) {
-    console.error('OpenAI API error:', error)
+    console.error('banaAI API error:', error)
     throw error
   }
 }
@@ -315,7 +315,7 @@ export async function generateCopies(base64Image: string, apiKey?: string): Prom
 
     const content = response.choices[0]?.message?.content
     if (!content) {
-      throw new Error('OpenAI API response is empty')
+      throw new Error('banaAI API response is empty')
     }
 
     try {
@@ -323,10 +323,10 @@ export async function generateCopies(base64Image: string, apiKey?: string): Prom
     } catch (parseError) {
       console.error('JSON parse error:', parseError)
       console.log('Raw response:', content)
-      throw new Error('OpenAI API returned invalid JSON')
+      throw new Error('banaAI API returned invalid JSON')
     }
   } catch (error) {
-    console.error('OpenAI API error:', error)
+    console.error('banaAI API error:', error)
     throw error
   }
 }

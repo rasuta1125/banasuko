@@ -190,7 +190,7 @@ export const renderer = jsxRenderer(({ children }) => {
                 <ul class="text-gray-400 text-sm space-y-2">
                   <li><i class="fas fa-code mr-2 text-cyber-pink"></i>Hono Framework</li>
                   <li><i class="fas fa-cloud mr-2 text-cyber-pink"></i>Cloudflare Pages</li>
-                  <li><i class="fas fa-robot mr-2 text-cyber-pink"></i>OpenAI GPT-4o Vision</li>
+                  <li><i class="fas fa-robot mr-2 text-cyber-pink"></i>最先端banaAI Vision</li>
                   <li><i class="fas fa-mobile-alt mr-2 text-cyber-pink"></i>レスポンシブデザイン</li>
                 </ul>
               </div>

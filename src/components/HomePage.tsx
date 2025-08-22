@@ -15,7 +15,7 @@ export const HomePage = () => {
                 <span class="text-white">バナスコAI</span>
               </h1>
               <p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-                OpenAI GPT-4o Visionを活用した次世代広告分析ツール
+                最先端banaAI Vision技術を活用した次世代広告分析ツール
                 <br />
                 <span class="text-cyber-blue font-semibold">瞬時に診断、的確に改善提案</span>
               </p>

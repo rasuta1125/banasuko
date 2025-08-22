@@ -5,13 +5,13 @@
 ### 1. 前提条件
 - Cloudflareアカウント（既存）
 - Cloudflare APIトークン（Pages:Edit権限）
-- OpenAI APIキー（GPT-4o Vision API利用）
+- banaAI APIキー（OpenAI互換・Vision API利用）
 
 ### 2. 環境変数の設定
 
 #### Cloudflare Dashboard で設定する環境変数:
 ```
-OPENAI_API_KEY=sk-your-openai-api-key-here
+OPENAI_API_KEY=sk-your-banaai-api-key-here
 PING=ok
 ```
 
@@ -70,8 +70,8 @@ Cloudflare Dashboard > Pages > banasco-ai > Custom domains で設定
    - Cloudflare Dashboard > Pages > banasco-ai > Settings > Environment variables で設定
    - デプロイ後に環境変数を追加した場合は再デプロイが必要
 
-3. **OpenAI API エラー**
-   - APIキーの権限確認（GPT-4o Vision API利用可能か）
+3. **banaAI API エラー**
+   - APIキーの権限確認（banaAI Vision API利用可能か）
    - 使用量制限の確認
 
 4. **Firebase接続エラー**

@@ -450,9 +450,9 @@ app.post('/api/analysis/single', async (c) => {
 
     // OpenAI APIキーが設定されているかチェック（Cloudflare Pages対応）
     if (!c.env.OPENAI_API_KEY || c.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
-      console.log('OpenAI API Key not configured, using fallback data');
+      console.log('banaAI API Key not configured, using fallback data');
       // フォールバック処理
-      throw new Error('OpenAI API Key not configured');
+      throw new Error('banaAI API Key not configured');
     }
 
     // 画像をBase64エンコード（Cloudflare Workers対応）
@@ -521,7 +521,7 @@ app.post('/api/analysis/single', async (c) => {
             brandAwareness: { change: 34 }
           }
         },
-        note: 'OpenAI API未接続のため、デモデータを表示しています'
+        note: 'banaAI APIデモモード：サンプル解析データを表示しています'
       }
     })
   }
@@ -645,7 +645,7 @@ app.post('/api/analysis/compare', async (c) => {
             cpaReduction: 19.5
           }
         },
-        note: 'OpenAI API未接続のため、デモデータを表示しています'
+        note: 'banaAI APIデモモード：サンプル解析データを表示しています'
       }
     })
   }
@@ -760,7 +760,7 @@ app.post('/api/copy-generation', async (c) => {
             'サブコピーで信頼性を補完'
           ]
         },
-        note: 'OpenAI API未接続のため、デモデータを表示しています'
+        note: 'banaAI APIデモモード：サンプル解析データを表示しています'
       }
     })
   }

@@ -10,7 +10,7 @@ export const AnalysisPage = () => {
             </span>
           </h1>
           <p class="text-xl text-gray-300 max-w-3xl mx-auto">
-            OpenAI GPT-4o Visionが画像を詳細分析し、効果予測と改善提案を提供
+            最先端banaAI Vision技術が画像を詳細分析し、効果予測と改善提案を提供
           </p>
         </div>
         

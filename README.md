@@ -9,7 +9,7 @@
 
 **次世代AI広告分析プラットフォーム**
 
-*OpenAI GPT-4o Vision × Cloudflare Edge × プロフェッショナルデザイン*
+*最先端banaAI Vision × Cloudflare Edge × プロフェッショナルデザイン*
 
 </div>
 
@@ -77,8 +77,8 @@
 - **CI/CD**: GitHub → Cloudflare Pages 自動デプロイ
 
 ### AI・外部API
-- **画像解析**: OpenAI GPT-4o Vision API
-- **自然言語処理**: OpenAI GPT-4o
+- **画像解析**: 最先端banaAI Vision API
+- **自然言語処理**: banaAI高精度解析エンジン
 - **プロンプトエンジニアリング**: 業界特化プロンプト
 - **レスポンス最適化**: ストリーミング非対応・バッチ処理
 
@@ -193,7 +193,7 @@ interface ABComparisonResult {
 2. **環境変数**
    ```bash
    # Cloudflare Pages環境変数
-   OPENAI_API_KEY=sk-...  # OpenAI APIキー
+   OPENAI_API_KEY=sk-...  # banaAI APIキー（OpenAI互換）
    NODE_VERSION=18        # Node.js バージョン指定
    ```
 
@@ -273,7 +273,7 @@ pm2 stop banasuko-ai       # 停止
 
 ### 📊 機能拡張
 - [ ] **ユーザー専用ダッシュボード**: 分析履歴・統計表示
-- [ ] **リアルタイムOpenAI連携**: 実画像でのAI分析
+- [ ] **リアルタイムbanaAI連携**: 実画像でのAI分析
 - [ ] **競合分析機能**: 業界ベンチマーク比較
 - [ ] **PDF レポート出力**: 詳細分析レポート生成
 - [ ] **API連携**: 外部ツールとの連携機能
