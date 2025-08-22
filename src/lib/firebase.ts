@@ -52,7 +52,7 @@ export interface User {
   email: string
   username: string
   displayName?: string
-  photoURL?: string
+  photoURL?: string | null  // nullも許可
   plan: 'free' | 'basic' | 'premium'
   usageCount: number
   maxUsage: number

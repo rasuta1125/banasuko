@@ -43,15 +43,40 @@ export function verifyAuthToken(token: string): AuthToken | null {
 
 // 認証ミドルウェア
 export async function authMiddleware(c: Context, next: Function) {
-  const token = getCookie(c, 'auth-token')
+  let token = getCookie(c, 'auth-token')
+  
+  // Cookieにトークンがない場合、Authorizationヘッダーをチェック
+  if (!token) {
+    const authHeader = c.req.header('Authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7) // "Bearer " を除去
+    }
+  }
   
   if (token) {
     const decoded = verifyAuthToken(token)
     if (decoded) {
       try {
-        // ユーザー情報をコンテキストに追加
-        const user = await UserService.getUserById(decoded.uid)
-        c.set('user', user)
+        // デモユーザーの場合は直接ユーザー情報を設定
+        if (decoded.uid === 'demo-user-123') {
+          const demoUser = {
+            uid: 'demo-user-123',
+            email: 'demo@banasuko.com',
+            username: 'demo',
+            displayName: 'デモユーザー',
+            plan: 'basic',
+            usageCount: 5,
+            maxUsage: 100,
+            createdAt: { seconds: Date.now() / 1000, nanoseconds: 0 },
+            lastLoginAt: { seconds: Date.now() / 1000, nanoseconds: 0 },
+            isActive: true
+          }
+          c.set('user', demoUser)
+        } else {
+          // 通常のユーザーはFirestoreから取得
+          const user = await UserService.getUserById(decoded.uid)
+          c.set('user', user)
+        }
       } catch (error) {
         // ユーザーが見つからない場合、トークンを削除
         deleteCookie(c, 'auth-token')

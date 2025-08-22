@@ -49,12 +49,11 @@ export class UserService {
       }
 
       // Firestore にユーザー情報保存
-      const userData: User = {
+      const userData: any = {
         uid: firebaseUser.uid,
         email: firebaseUser.email!,
         username: username,
         displayName: displayName || username,
-        photoURL: firebaseUser.photoURL || undefined,
         plan: 'free', // デフォルトはフリープラン
         usageCount: 0,
         maxUsage: DEFAULT_PLANS.free.maxUsage,
@@ -62,11 +61,16 @@ export class UserService {
         lastLoginAt: Timestamp.now(),
         isActive: true
       }
+      
+      // photoURLが存在する場合のみ追加
+      if (firebaseUser.photoURL) {
+        userData.photoURL = firebaseUser.photoURL
+      }
 
       await setDoc(doc(db, 'users', firebaseUser.uid), userData)
       
       console.log('User registered successfully:', userData.uid)
-      return userData
+      return userData as User
 
     } catch (error) {
       console.error('User registration error:', error)
