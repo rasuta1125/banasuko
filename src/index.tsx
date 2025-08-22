@@ -89,10 +89,13 @@ app.post('/api/auth/register', async (c) => {
 
 app.post('/api/analysis/single', async (c) => {
   try {
-    // 環境変数デバッグ
+    // 環境変数デバッグ（詳細）
     console.log('Environment check:', {
       hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-      keyPrefix: process.env.OPENAI_API_KEY?.substring(0, 10) + '...',
+      keyLength: process.env.OPENAI_API_KEY?.length || 0,
+      keyPrefix: process.env.OPENAI_API_KEY?.substring(0, 15) + '...',
+      keyType: typeof process.env.OPENAI_API_KEY,
+      allEnvKeys: Object.keys(process.env).filter(k => k.includes('OPENAI')),
       nodeEnv: process.env.NODE_ENV
     });
 
