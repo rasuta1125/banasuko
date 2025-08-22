@@ -22,7 +22,7 @@ export async function encodeImage(file: File): Promise<string> {
 
 // バナー分析用プロンプト（banaAI専用）
 export const ANALYSIS_PROMPT = `
-あなたはbanaAI搭載の広告バナー分析エキスパートです。アップロードされたバナー画像を以下の5項目で詳細分析し、JSONフォーマットで結果を返してください。
+あなたはbanaAI搭載の広告バナー分析エキスパートです。アップロードされたバナー画像を以下の5項目で詳細分析し、**スコア+理由+改善提案+ポジティブコメント+コピー代案**をセットでJSONフォーマットで返してください。
 
 ## 分析項目
 1. **瞬間伝達力 (impact)**: 3秒以内にメッセージが理解できるか (0-100点)
@@ -35,6 +35,7 @@ export const ANALYSIS_PROMPT = `
 {
   "totalScore": 82,
   "level": "優秀レベル",
+  "scoreColor": "#87CEEB",
   "scores": {
     "impact": { "score": 88, "label": "瞬間伝達力", "color": "#90EE90" },
     "visibility": { "score": 79, "label": "視認性", "color": "#87CEEB" },
@@ -44,6 +45,7 @@ export const ANALYSIS_PROMPT = `
   },
   "analysis": {
     "targetMatch": 91,
+    "evaluationReason": "バナーのビジュアルは洗練されていますが、広告内容が一瞬で伝わりにくい部分があります。コピーは可愛らしく配置されていますが、視認性がやや低いです。行動喚起が弱いため、スタジオ利用促進に繋がりにくい可能性があります。",
     "strengths": [
       "視覚階層: メインメッセージが3秒以内に理解可能",
       "色彩バランス: ブランドカラーと可読性の両立が秀逸",
@@ -54,6 +56,33 @@ export const ANALYSIS_PROMPT = `
       "余白調整: 左右マージンを1.2倍に拡張",
       "フォントサイズ: キャッチコピーを24px→28pxに"
     ],
+    "positiveComment": "全体的に写真とテキストの調和は取れているので、情報を明確にする方向で改善を進めることで大きく向上が期待できます。",
+    "copyAlternatives": {
+      "catchy": {
+        "title": "キャッチー型",
+        "headline": "今すぐ始める！話題沸騰のプロ仕様スタジオ体験",
+        "subtext": "初回限定50%OFF・無料体験実施中",
+        "cta": "今すぐ予約する"
+      },
+      "trustworthy": {
+        "title": "信頼性重視型", 
+        "headline": "プロが選ぶ高品質スタジオ設備を体験",
+        "subtext": "業界最高レベルの機材・実績5,000件突破",
+        "cta": "詳細を確認する"
+      },
+      "urgent": {
+        "title": "緊急性訴求型",
+        "headline": "残り3日！限定オープンキャンペーン",
+        "subtext": "先着30名様限定・この機会を逃すと次回未定",
+        "cta": "急いで予約する"
+      },
+      "simple": {
+        "title": "シンプル型",
+        "headline": "あなたのクリエイティブを形にする場所",
+        "subtext": "プロ仕様スタジオ・手ぶらでOK",
+        "cta": "予約する"
+      }
+    },
     "performance": {
       "clickRate": { "current": 3.2, "improved": 4.1, "change": 28 },
       "conversionRate": { "current": 1.8, "improved": 2.3, "change": 27 },
@@ -74,7 +103,7 @@ export const ANALYSIS_PROMPT = `
 
 // A/B比較分析用プロンプト（banaAI専用）
 export const AB_COMPARISON_PROMPT = `
-あなたはbanaAI搭載の広告バナーA/B比較分析エキスパートです。2つのバナー画像を高精度で比較分析し、どちらが効果的かをJSONフォーマットで返してください。
+あなたはbanaAI搭載の広告バナーA/B比較分析エキスパートです。2つのバナー画像を高精度で比較分析し、**スコア+理由+改善提案+ポジティブコメント**をセットでJSONフォーマットで返してください。
 
 ## 分析項目
 1. **瞬間伝達力 (impact)**: 3秒以内にメッセージが理解できるか
@@ -110,6 +139,7 @@ export const AB_COMPARISON_PROMPT = `
     }
   },
   "analysis": {
+    "winnerReason": "パターンAは瞬間伝達力と行動喚起の面で明確に優れており、ユーザーの注意を効果的に引きつけCTAへの誘導が自然に行われています。特に色彩バランスとレイアウトの統一感が優秀です。",
     "advantages": [
       "瞬間伝達力 +21点: メインメッセージの視認性が圧倒的に高い",
       "行動喚起 +15点: CTAボタンの配色・配置が最適化されている"
@@ -118,6 +148,7 @@ export const AB_COMPARISON_PROMPT = `
       "文字階層の見直しが必要（情報の優先度が不明確）",
       "CTAの視認性向上（背景との対比不足）"
     ],
+    "positiveComment": "両パターンとも基本的な構成は優秀で、ブランドイメージの統一性が保たれています。微調整により更なる改善が期待できる良質な素材です。",
     "expectedResults": {
       "currentCvr": 2.1,
       "improvedCvr": 2.6,

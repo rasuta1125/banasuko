@@ -23,7 +23,7 @@ export const AnalysisPage = () => {
             </h3>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">ユーザー名</label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">表示名</label>
                 <input 
                   type="text" 
                   id="userName"
@@ -53,10 +53,29 @@ export const AnalysisPage = () => {
                 <select 
                   id="platform"
                   class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-blue transition-colors"
+                  onchange="handlePlatformChange(this.value)"
                 >
-                  <option value="Instagram">Instagram</option>
-                  <option value="GDN">GDN</option>
-                  <option value="YDN">YDN</option>
+                  <option value="">媒体を選択してください</option>
+                  <option value="instagram-post">Instagram（投稿）</option>
+                  <option value="instagram-ad">Instagram（広告）</option>
+                  <option value="gdn">Googleディスプレイ広告</option>
+                  <option value="yahoo">Yahooディスプレイ広告</option>
+                </select>
+              </div>
+              
+              {/* Instagram広告タイプ詳細（広告選択時に表示） */}
+              <div id="instagramAdType" class="hidden">
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  <i class="fab fa-instagram mr-2 text-cyber-pink"></i>Instagram広告タイプ
+                </label>
+                <select 
+                  id="instagramAdSubtype"
+                  class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-pink transition-colors"
+                >
+                  <option value="feed">フィード広告</option>
+                  <option value="stories">ストーリーズ広告</option>
+                  <option value="reels">リール広告</option>
+                  <option value="explore">発見タブ広告</option>
                 </select>
               </div>
               
@@ -72,6 +91,11 @@ export const AnalysisPage = () => {
                   <option value="インプレッション増加">インプレッション増加</option>
                 </select>
               </div>
+            </div>
+            
+            {/* スコアタイプ表示 */}
+            <div id="scoringTypeInfo" class="mt-4 p-3 bg-navy-800/30 rounded-lg border border-gray-700/50">
+              <p class="text-gray-400 text-sm font-medium">📋 媒体を選択してください</p>
             </div>
           </div>
           
@@ -146,12 +170,34 @@ export const AnalysisPage = () => {
               <i class="fas fa-cloud-upload-alt mr-2"></i>画像アップロード
             </h3>
             
-            <div class="border-2 border-dashed border-cyber-purple/30 rounded-xl p-8 text-center hover:border-cyber-purple/50 transition-colors duration-300">
+            <div class="border-2 border-dashed border-cyber-purple/30 rounded-xl p-6 sm:p-8 text-center hover:border-cyber-purple/50 transition-colors duration-300">
               <div id="dropZone" class="cursor-pointer">
-                <i class="fas fa-image text-6xl text-cyber-purple/50 mb-4"></i>
-                <p class="text-lg text-gray-300 mb-2">画像をドラッグ&ドロップまたはクリックしてアップロード</p>
-                <p class="text-sm text-gray-400">PNG, JPG, JPEG対応（最大10MB）</p>
-                <input type="file" id="imageUpload" class="hidden" accept="image/*" />
+                <i class="fas fa-image text-4xl sm:text-6xl text-cyber-purple/50 mb-4"></i>
+                <p class="text-base sm:text-lg text-gray-300 mb-2">
+                  <span class="hidden sm:inline">画像をドラッグ&ドロップまたは</span>クリックしてアップロード
+                </p>
+                <p class="text-xs sm:text-sm text-gray-400 mb-4">PNG, JPG, JPEG対応（最大10MB）</p>
+                
+                {/* モバイル向けボタン */}
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center">
+                  <button type="button" onclick="document.getElementById('imageUpload').click()" 
+                          class="w-full sm:w-auto bg-cyber-purple/20 border border-cyber-purple/50 text-cyber-purple px-4 py-2 rounded-lg hover:bg-cyber-purple/30 transition-colors">
+                    <i class="fas fa-folder-open mr-2"></i>ファイルを選択
+                  </button>
+                  <button type="button" onclick="document.getElementById('cameraUpload').click()" 
+                          class="w-full sm:w-auto bg-cyber-blue/20 border border-cyber-blue/50 text-cyber-blue px-4 py-2 rounded-lg hover:bg-cyber-blue/30 transition-colors sm:hidden">
+                    <i class="fas fa-camera mr-2"></i>カメラで撮影
+                  </button>
+                </div>
+                
+                {/* ファイル入力 */}
+                <input type="file" id="imageUpload" class="hidden" 
+                       accept="image/png,image/jpeg,image/jpg,image/webp" 
+                       capture="environment" />
+                {/* カメラ専用入力（モバイル） */}
+                <input type="file" id="cameraUpload" class="hidden" 
+                       accept="image/*" 
+                       capture="environment" />
               </div>
             </div>
             
@@ -170,12 +216,22 @@ export const AnalysisPage = () => {
               <h3 class="text-xl font-semibold text-cyber-blue mb-4 text-center">
                 🅰️ パターンA
               </h3>
-              <div class="border-2 border-dashed border-cyber-blue/30 rounded-xl p-6 text-center hover:border-cyber-blue/50 transition-colors duration-300">
+              <div class="border-2 border-dashed border-cyber-blue/30 rounded-xl p-4 sm:p-6 text-center hover:border-cyber-blue/50 transition-colors duration-300">
                 <div id="dropZoneA" class="cursor-pointer">
-                  <i class="fas fa-image text-4xl text-cyber-blue/50 mb-3"></i>
-                  <p class="text-gray-300 mb-1">画像Aをアップロード</p>
-                  <p class="text-xs text-gray-400">PNG, JPG, JPEG</p>
-                  <input type="file" id="imageUploadA" class="hidden" accept="image/*" />
+                  <i class="fas fa-image text-3xl sm:text-4xl text-cyber-blue/50 mb-3"></i>
+                  <p class="text-sm sm:text-base text-gray-300 mb-2">画像Aをアップロード</p>
+                  <div class="flex flex-col gap-2">
+                    <button type="button" onclick="document.getElementById('imageUploadA').click()" 
+                            class="w-full bg-cyber-blue/20 border border-cyber-blue/50 text-cyber-blue px-3 py-1.5 rounded text-sm hover:bg-cyber-blue/30 transition-colors">
+                      <i class="fas fa-folder-open mr-1"></i>選択
+                    </button>
+                    <button type="button" onclick="document.getElementById('cameraUploadA').click()" 
+                            class="w-full bg-cyber-green/20 border border-cyber-green/50 text-cyber-green px-3 py-1.5 rounded text-sm hover:bg-cyber-green/30 transition-colors sm:hidden">
+                      <i class="fas fa-camera mr-1"></i>撮影
+                    </button>
+                  </div>
+                  <input type="file" id="imageUploadA" class="hidden" accept="image/png,image/jpeg,image/jpg,image/webp" />
+                  <input type="file" id="cameraUploadA" class="hidden" accept="image/*" capture="environment" />
                 </div>
               </div>
               <div id="imagePreviewA" class="hidden mt-4">
@@ -188,12 +244,22 @@ export const AnalysisPage = () => {
               <h3 class="text-xl font-semibold text-cyber-pink mb-4 text-center">
                 🅱️ パターンB
               </h3>
-              <div class="border-2 border-dashed border-cyber-pink/30 rounded-xl p-6 text-center hover:border-cyber-pink/50 transition-colors duration-300">
+              <div class="border-2 border-dashed border-cyber-pink/30 rounded-xl p-4 sm:p-6 text-center hover:border-cyber-pink/50 transition-colors duration-300">
                 <div id="dropZoneB" class="cursor-pointer">
-                  <i class="fas fa-image text-4xl text-cyber-pink/50 mb-3"></i>
-                  <p class="text-gray-300 mb-1">画像Bをアップロード</p>
-                  <p class="text-xs text-gray-400">PNG, JPG, JPEG</p>
-                  <input type="file" id="imageUploadB" class="hidden" accept="image/*" />
+                  <i class="fas fa-image text-3xl sm:text-4xl text-cyber-pink/50 mb-3"></i>
+                  <p class="text-sm sm:text-base text-gray-300 mb-2">画像Bをアップロード</p>
+                  <div class="flex flex-col gap-2">
+                    <button type="button" onclick="document.getElementById('imageUploadB').click()" 
+                            class="w-full bg-cyber-pink/20 border border-cyber-pink/50 text-cyber-pink px-3 py-1.5 rounded text-sm hover:bg-cyber-pink/30 transition-colors">
+                      <i class="fas fa-folder-open mr-1"></i>選択
+                    </button>
+                    <button type="button" onclick="document.getElementById('cameraUploadB').click()" 
+                            class="w-full bg-cyber-green/20 border border-cyber-green/50 text-cyber-green px-3 py-1.5 rounded text-sm hover:bg-cyber-green/30 transition-colors sm:hidden">
+                      <i class="fas fa-camera mr-1"></i>撮影
+                    </button>
+                  </div>
+                  <input type="file" id="imageUploadB" class="hidden" accept="image/png,image/jpeg,image/jpg,image/webp" />
+                  <input type="file" id="cameraUploadB" class="hidden" accept="image/*" capture="environment" />
                 </div>
               </div>
               <div id="imagePreviewB" class="hidden mt-4">
@@ -690,6 +756,9 @@ export const AnalysisPage = () => {
           });
         `
       }} />
+      
+      {/* 分析ページ専用JavaScript */}
+      <script src="/js/analysis.js"></script>
     </div>
   )
 }

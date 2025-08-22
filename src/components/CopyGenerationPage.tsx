@@ -163,12 +163,28 @@ export const CopyGenerationPage = () => {
               <i class="fas fa-cloud-upload-alt mr-2"></i>バナー画像アップロード
             </h3>
             
-            <div class="border-2 border-dashed border-cyber-purple/30 rounded-xl p-8 text-center hover:border-cyber-purple/50 transition-colors duration-300">
+            <div class="border-2 border-dashed border-cyber-purple/30 rounded-xl p-6 sm:p-8 text-center hover:border-cyber-purple/50 transition-colors duration-300">
               <div id="copyDropZone" class="cursor-pointer">
-                <i class="fas fa-image text-6xl text-cyber-purple/50 mb-4"></i>
-                <p class="text-lg text-gray-300 mb-2">コピー生成用の画像をアップロード</p>
-                <p class="text-sm text-gray-400">PNG, JPG, JPEG対応（最大10MB）</p>
-                <input type="file" id="copyImageUpload" class="hidden" accept="image/*" />
+                <i class="fas fa-image text-4xl sm:text-6xl text-cyber-purple/50 mb-4"></i>
+                <p class="text-base sm:text-lg text-gray-300 mb-2">
+                  <span class="hidden sm:inline">コピー生成用の</span>画像をアップロード
+                </p>
+                <p class="text-xs sm:text-sm text-gray-400 mb-4">PNG, JPG, JPEG対応（最大10MB）</p>
+                
+                {/* モバイル向けボタン */}
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center">
+                  <button type="button" onclick="document.getElementById('copyImageUpload').click()" 
+                          class="w-full sm:w-auto bg-cyber-purple/20 border border-cyber-purple/50 text-cyber-purple px-4 py-2 rounded-lg hover:bg-cyber-purple/30 transition-colors">
+                    <i class="fas fa-folder-open mr-2"></i>ファイルを選択
+                  </button>
+                  <button type="button" onclick="document.getElementById('copyCameraUpload').click()" 
+                          class="w-full sm:w-auto bg-cyber-blue/20 border border-cyber-blue/50 text-cyber-blue px-4 py-2 rounded-lg hover:bg-cyber-blue/30 transition-colors sm:hidden">
+                    <i class="fas fa-camera mr-2"></i>カメラで撮影
+                  </button>
+                </div>
+                
+                <input type="file" id="copyImageUpload" class="hidden" accept="image/png,image/jpeg,image/jpg,image/webp" />
+                <input type="file" id="copyCameraUpload" class="hidden" accept="image/*" capture="environment" />
               </div>
             </div>
             
