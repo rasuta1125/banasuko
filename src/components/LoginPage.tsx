@@ -16,15 +16,16 @@ export const LoginPage = () => {
           <form id="loginForm" class="space-y-6">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">
-                <i class="fas fa-user mr-2 text-cyber-blue"></i>ユーザー名
+                <i class="fas fa-envelope mr-2 text-cyber-blue"></i>メールアドレス
               </label>
               <input 
-                type="text" 
-                id="username"
-                name="username"
+                type="email" 
+                id="email"
+                name="email"
                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/20 transition-all duration-300"
-                placeholder="ユーザー名を入力"
+                placeholder="メールアドレスを入力"
                 required
+                autocomplete="email"
               />
             </div>
             
@@ -91,8 +92,8 @@ export const LoginPage = () => {
             <div class="bg-navy-700/50 rounded-lg p-4 mb-4">
               <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span class="text-gray-400">ユーザー名:</span>
-                  <div class="text-cyber-blue font-mono font-semibold">demo</div>
+                  <span class="text-gray-400">メールアドレス:</span>
+                  <div class="text-cyber-blue font-mono font-semibold">demo@banasuko.com</div>
                 </div>
                 <div>
                   <span class="text-gray-400">パスワード:</span>

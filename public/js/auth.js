@@ -148,10 +148,16 @@ class AuthManager {
     event.preventDefault();
     
     const formData = new FormData(event.target);
+    const email = formData.get('email');
+    const password = formData.get('password');
+    
+    // デモアカウントかどうかを判定
+    const isDemo = email === 'demo@banasuko.com' && password === 'demo123';
+    
     const loginData = {
-      email: formData.get('username'), // usernameフィールドだが実際はemail
-      password: formData.get('password'),
-      username: formData.get('username') // デモログイン用
+      email: email,
+      password: password,
+      username: isDemo ? 'demo' : email.split('@')[0] // デモログイン用またはemail prefix
     };
 
     this.setLoading(true, 'ログイン');
@@ -247,6 +253,26 @@ class AuthManager {
   async handleDemoLogin(event) {
     event.preventDefault();
     
+    // デモアカウント情報をフォームに自動入力
+    const emailField = document.getElementById('email');
+    const passwordField = document.getElementById('password');
+    
+    if (emailField && passwordField) {
+      emailField.value = 'demo@banasuko.com';
+      passwordField.value = 'demo123';
+      
+      // 通常のログイン処理を実行
+      const loginForm = document.getElementById('loginForm');
+      if (loginForm) {
+        this.handleLogin({ 
+          preventDefault: () => {}, 
+          target: loginForm 
+        });
+        return;
+      }
+    }
+    
+    // フォールバック: 直接デモログインAPI呼び出し
     this.setLoading(true, 'demo');
 
     try {
