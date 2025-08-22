@@ -6,7 +6,9 @@ import { HomePage } from './components/HomePage'
 import { LoginPage } from './components/LoginPage'
 import { AnalysisPage } from './components/AnalysisPage'
 import { CopyGenerationPage } from './components/CopyGenerationPage'
-import { analyzeSingleImage, compareImages, generateCopies } from './services/openai'
+// OpenAI クライアント初期化をcontext内で行うため、インポートのみ
+import OpenAI from 'openai'
+import { ANALYSIS_PROMPT, AB_COMPARISON_PROMPT, COPY_GENERATION_PROMPT } from './services/openai'
 
 const app = new Hono()
 
@@ -41,10 +43,11 @@ app.get('/api/status', async (c) => {
   return c.json({
     success: true,
     status: {
-      openai_configured: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here',
-      key_prefix: process.env.OPENAI_API_KEY?.substring(0, 10) + '...' || 'not_set',
+      openai_configured: !!c.env.OPENAI_API_KEY && c.env.OPENAI_API_KEY !== 'your_openai_api_key_here',
+      key_prefix: c.env.OPENAI_API_KEY?.substring(0, 10) + '...' || 'not_set',
       environment: process.env.NODE_ENV || 'unknown',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      cloudflare_context: true
     }
   })
 })
@@ -87,15 +90,51 @@ app.post('/api/auth/register', async (c) => {
   }
 })
 
+// OpenAI分析関数（Cloudflare Pages対応）
+async function analyzeSingleImageWithClient(openai: OpenAI, base64Image: string): Promise<any> {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: ANALYSIS_PROMPT },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:image/jpeg;base64,${base64Image}`
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 1500,
+    temperature: 0.1
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('OpenAI API response is empty');
+  }
+
+  try {
+    return JSON.parse(content);
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError);
+    console.log('Raw response:', content);
+    throw new Error('OpenAI API returned invalid JSON');
+  }
+}
+
 app.post('/api/analysis/single', async (c) => {
   try {
-    // 環境変数デバッグ（詳細）
+    // 環境変数デバッグ（Cloudflare Pages対応）
     console.log('Environment check:', {
-      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-      keyLength: process.env.OPENAI_API_KEY?.length || 0,
-      keyPrefix: process.env.OPENAI_API_KEY?.substring(0, 15) + '...',
-      keyType: typeof process.env.OPENAI_API_KEY,
-      allEnvKeys: Object.keys(process.env).filter(k => k.includes('OPENAI')),
+      hasOpenAIKey_process: !!process.env.OPENAI_API_KEY,
+      hasOpenAIKey_context: !!c.env.OPENAI_API_KEY,
+      keyLength_context: c.env.OPENAI_API_KEY?.length || 0,
+      keyPrefix_context: c.env.OPENAI_API_KEY?.substring(0, 15) + '...',
+      keyType_context: typeof c.env.OPENAI_API_KEY,
       nodeEnv: process.env.NODE_ENV
     });
 
@@ -107,8 +146,8 @@ app.post('/api/analysis/single', async (c) => {
       return c.json({ success: false, message: '画像ファイルが選択されていません' }, 400)
     }
 
-    // OpenAI APIキーが設定されているかチェック
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+    // OpenAI APIキーが設定されているかチェック（Cloudflare Pages対応）
+    if (!c.env.OPENAI_API_KEY || c.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
       console.log('OpenAI API Key not configured, using fallback data');
       // フォールバック処理
       throw new Error('OpenAI API Key not configured');
@@ -125,8 +164,9 @@ app.post('/api/analysis/single', async (c) => {
       reader.readAsDataURL(imageFile)
     })
 
-    // OpenAI API を使用して画像分析
-    const result = await analyzeSingleImage(base64Image)
+    // OpenAI API を使用して画像分析（Cloudflare Pages対応）
+    const openai = new OpenAI({ apiKey: c.env.OPENAI_API_KEY });
+    const result = await analyzeSingleImageWithClient(openai, base64Image)
     
     return c.json({
       success: true,
