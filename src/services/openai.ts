@@ -1,9 +1,11 @@
 import OpenAI from 'openai'
 
-// OpenAI API クライアント設定
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-})
+// OpenAI API クライアント設定（Cloudflare Workers対応）
+function createOpenAIClient(apiKey: string) {
+  return new OpenAI({
+    apiKey: apiKey,
+  })
+}
 
 // 画像をBase64エンコード
 export async function encodeImage(file: File): Promise<string> {
@@ -193,8 +195,9 @@ export const COPY_GENERATION_PROMPT = `
 `
 
 // 単一画像分析
-export async function analyzeSingleImage(base64Image: string): Promise<any> {
+export async function analyzeSingleImage(base64Image: string, apiKey?: string): Promise<any> {
   try {
+    const openai = createOpenAIClient(apiKey || process.env.OPENAI_API_KEY || '')
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -235,8 +238,9 @@ export async function analyzeSingleImage(base64Image: string): Promise<any> {
 }
 
 // A/B比較分析
-export async function compareImages(base64ImageA: string, base64ImageB: string): Promise<any> {
+export async function compareImages(base64ImageA: string, base64ImageB: string, apiKey?: string): Promise<any> {
   try {
+    const openai = createOpenAIClient(apiKey || process.env.OPENAI_API_KEY || '')
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -286,8 +290,9 @@ export async function compareImages(base64ImageA: string, base64ImageB: string):
 }
 
 // コピー生成
-export async function generateCopies(base64Image: string): Promise<any> {
+export async function generateCopies(base64Image: string, apiKey?: string): Promise<any> {
   try {
+    const openai = createOpenAIClient(apiKey || process.env.OPENAI_API_KEY || '')
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [

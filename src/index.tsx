@@ -388,53 +388,25 @@ app.get('/api/admin/users/search', requireAdmin, async (c) => {
   }
 })
 
+// OpenAI API サービスのインポート
+import { 
+  analyzeSingleImage, 
+  compareImages as compareImagesWithOpenAI, 
+  generateCopies as generateCopiesWithOpenAI 
+} from './services/openai'
+
 // OpenAI分析関数（Cloudflare Pages対応）
 async function compareImages(base64ImageA: string, base64ImageB: string): Promise<any> {
-  // This would use OpenAI API for A/B comparison
-  // For now, return mock data
-  throw new Error('OpenAI API not configured for comparison')
+  // 実際のOpenAI API呼び出し
+  return await compareImagesWithOpenAI(base64ImageA, base64ImageB)
 }
 
 async function generateCopies(base64Image: string): Promise<any> {
-  // This would use OpenAI API for copy generation
-  // For now, return mock data
-  throw new Error('OpenAI API not configured for copy generation')
+  // 実際のOpenAI API呼び出し
+  return await generateCopiesWithOpenAI(base64Image)
 }
 
-async function analyzeSingleImageWithClient(openai: OpenAI, base64Image: string): Promise<any> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: ANALYSIS_PROMPT },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:image/jpeg;base64,${base64Image}`
-            }
-          }
-        ]
-      }
-    ],
-    max_tokens: 1500,
-    temperature: 0.1
-  });
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error('OpenAI API response is empty');
-  }
-
-  try {
-    return JSON.parse(content);
-  } catch (parseError) {
-    console.error('JSON parse error:', parseError);
-    console.log('Raw response:', content);
-    throw new Error('OpenAI API returned invalid JSON');
-  }
-}
 
 app.post('/api/analysis/single', async (c) => {
   try {
@@ -489,8 +461,7 @@ app.post('/api/analysis/single', async (c) => {
     const base64Image = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)))
 
     // OpenAI API を使用して画像分析（Cloudflare Pages対応）
-    const openai = new OpenAI({ apiKey: c.env.OPENAI_API_KEY });
-    const result = await analyzeSingleImageWithClient(openai, base64Image)
+    const result = await analyzeSingleImage(base64Image, c.env.OPENAI_API_KEY)
     
     // 使用回数を増加（デモユーザーは除外）
     if (user.uid !== 'demo-user-123') {
@@ -598,7 +569,7 @@ app.post('/api/analysis/compare', async (c) => {
     const base64ImageB = btoa(String.fromCharCode.apply(null, Array.from(uint8ArrayB)))
 
     // OpenAI API を使用してA/B比較分析
-    const result = await compareImages(base64ImageA, base64ImageB)
+    const result = await compareImages(base64ImageA, base64ImageB, c.env.OPENAI_API_KEY)
     
     // 使用回数を増加（デモユーザーは除外）
     if (user.uid !== 'demo-user-123') {
@@ -716,7 +687,7 @@ app.post('/api/copy-generation', async (c) => {
     const base64Image = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)))
 
     // OpenAI API を使用してコピー生成
-    const result = await generateCopies(base64Image)
+    const result = await generateCopies(base64Image, c.env.OPENAI_API_KEY)
     
     // 使用回数を増加（デモユーザーは除外）
     if (user.uid !== 'demo-user-123') {
