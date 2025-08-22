@@ -1,0 +1,21 @@
+name = "banasuko"
+compatibility_date = "2025-08-21"
+pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
+
+# Define bindings for environment variables that will be set in Cloudflare Dashboard
+[[env.production.bindings]]
+name = "OPENAI_API_KEY"
+type = "secret"
+
+[[env.production.bindings]]
+name = "PING"
+type = "secret"
+
+[[env.preview.bindings]]
+name = "OPENAI_API_KEY"
+type = "secret"
+
+[[env.preview.bindings]]
+name = "PING"
+type = "secret"
