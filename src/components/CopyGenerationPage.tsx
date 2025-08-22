@@ -325,17 +325,24 @@ export const CopyGenerationPage = () => {
             
             // Image upload handlers
             if (dropZone && imageUpload) {
-              dropZone.addEventListener('click', () => imageUpload.click());
+              dropZone.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                imageUpload.click();
+              });
               dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.add('border-cyber-orange');
               });
               dropZone.addEventListener('dragleave', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.remove('border-cyber-orange');
               });
               dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.remove('border-cyber-orange');
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {

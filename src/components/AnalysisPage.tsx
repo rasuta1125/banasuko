@@ -402,17 +402,24 @@ export const AnalysisPage = () => {
             });
             
             // Single image upload
-            dropZone.addEventListener('click', () => imageUpload.click());
+            dropZone.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              imageUpload.click();
+            });
             dropZone.addEventListener('dragover', (e) => {
               e.preventDefault();
+              e.stopPropagation();
               dropZone.classList.add('border-cyber-purple');
             });
             dropZone.addEventListener('dragleave', (e) => {
               e.preventDefault();
+              e.stopPropagation();
               dropZone.classList.remove('border-cyber-purple');
             });
             dropZone.addEventListener('drop', (e) => {
               e.preventDefault();
+              e.stopPropagation();
               dropZone.classList.remove('border-cyber-purple');
               const files = e.dataTransfer.files;
               if (files.length > 0) {
@@ -458,17 +465,24 @@ export const AnalysisPage = () => {
               const imagePreview = document.getElementById('imagePreview' + pattern);
               const previewImage = document.getElementById('previewImage' + pattern);
               
-              dropZone.addEventListener('click', () => imageUpload.click());
+              dropZone.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                imageUpload.click();
+              });
               dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.add('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
               });
               dropZone.addEventListener('dragleave', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.remove('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
               });
               dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.remove('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
