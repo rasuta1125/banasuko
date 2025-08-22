@@ -1,6 +1,12 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
+
+// Cloudflare Pages Bindings型定義
+type Env = { 
+  OPENAI_API_KEY: string
+  PING: string 
+}
 import { renderer } from './renderer'
 import { HomePage } from './components/HomePage'
 import { LoginPage } from './components/LoginPage'
@@ -10,7 +16,7 @@ import { CopyGenerationPage } from './components/CopyGenerationPage'
 import OpenAI from 'openai'
 import { ANALYSIS_PROMPT, AB_COMPARISON_PROMPT, COPY_GENERATION_PROMPT } from './services/openai'
 
-const app = new Hono()
+const app = new Hono<{ Bindings: Env }>()
 
 // CORS設定
 app.use('/api/*', cors())
@@ -40,14 +46,20 @@ app.get('/copy-generation', (c) => {
 
 // API エンドポイント
 app.get('/api/status', async (c) => {
+  const k = c.env.OPENAI_API_KEY
+  const ping = c.env.PING
+  const envKeysCount = Object.keys(c.env || {}).length
+
   return c.json({
     success: true,
     status: {
-      openai_configured: !!c.env.OPENAI_API_KEY && c.env.OPENAI_API_KEY !== 'your_openai_api_key_here',
-      key_prefix: c.env.OPENAI_API_KEY?.substring(0, 10) + '...' || 'not_set',
-      environment: process.env.NODE_ENV || 'unknown',
-      timestamp: new Date().toISOString(),
-      cloudflare_context: true
+      openai_configured: Boolean(k),
+      key_prefix: k ? k.slice(0, 3) + '...' : 'undefined...',
+      ping_seen: ping === 'ok',
+      env_keys_count: envKeysCount,
+      environment: 'pages',
+      cloudflare_context: true,
+      timestamp: new Date().toISOString()
     }
   })
 })
