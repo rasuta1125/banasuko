@@ -5,10 +5,20 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [
-    build(),
+    build({
+      generateRoutes: true,
+      outputDir: 'dist'
+    }),
     devServer({
       adapter,
       entry: 'src/index.tsx'
     })
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'src/index.tsx'
+      }
+    }
+  }
 })
