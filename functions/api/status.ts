@@ -1,29 +1,20 @@
-import { Hono } from 'hono'
+// functions/api/status.ts
+// 監視用エンドポイント
+import { Hono } from 'hono';
 
-type Env = { 
-  OPENAI_API_KEY: string
-  PING: string 
-}
+type Env = { FIREBASE_PROJECT_ID: string };
 
-const app = new Hono<{ Bindings: Env }>()
+const app = new Hono<{ Bindings: Env }>();
 
-app.get('*', (c) => {
-  const k = c.env.OPENAI_API_KEY
-  const ping = c.env.PING
-  const envKeysCount = Object.keys(c.env || {}).length
-
+app.get(async (c) => {
+  const projectId = c.env.FIREBASE_PROJECT_ID || 'banasuko-auth';
+  
   return c.json({
-    success: true,
-    status: {
-      openai_configured: Boolean(k),
-      key_prefix: k ? k.slice(0, 3) + '...' : 'undefined...',
-      ping_seen: ping === 'ok',
-      env_keys_count: envKeysCount,
-      environment: 'pages',
-      cloudflare_context: true,
-      timestamp: new Date().toISOString()
-    }
-  })
-})
+    ok: true,
+    status: 'Firebase Auth Functions Active',
+    projectId: projectId,
+    timestamp: new Date().toISOString()
+  });
+});
 
-export const onRequest = app.fetch
+export const onRequest = app.fetch;

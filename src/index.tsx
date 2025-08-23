@@ -92,87 +92,8 @@ import { User } from './lib/firebase'
 // 認証ミドルウェア適用
 app.use('*', authMiddleware)
 
-// デモログイン（既存）
-app.post('/api/auth/demo-login', handleDemoLogin)
-
-// Firebase認証ログイン
-app.post('/api/auth/login', async (c) => {
-  try {
-    const body = await c.req.json()
-    
-    // デモアカウントかFirebase認証かを判定
-    if (body.username === 'demo' && body.password === 'demo123') {
-      return handleDemoLogin(c)
-    } else if (body.email && body.password) {
-      // Firebase認証
-      return handleFirebaseLogin(c)
-    } else {
-      return c.json({ 
-        success: false, 
-        error: 'メールアドレス・パスワードまたはデモアカウント情報を入力してください' 
-      }, 400)
-    }
-  } catch (error) {
-    console.error('Login error:', error)
-    return c.json({ success: false, error: 'ログインに失敗しました' }, 500)
-  }
-})
-
-// Firebase認証登録
-app.post('/api/auth/register', handleFirebaseRegister)
-
-// ログアウト
-app.post('/api/auth/logout', handleLogout)
-
-// Firebase IDトークン検証セッション作成（jose実装 - Cloudflare Workers対応）
-app.post('/api/session', async (c) => {
-  try {
-    const { idToken } = await c.req.json().catch(() => ({}))
-    
-    if (!idToken) {
-      return c.json({ ok: false, message: 'idToken required' }, 400)
-    }
-    
-    // joseを使用してFirebase IDトークンを検証
-    const { jwtVerify, createRemoteJWKSet } = await import('jose')
-    
-    // Firebase公開鍵（JWKS）
-    const JWKS = createRemoteJWKSet(
-      new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
-    )
-    
-    // Firebase Project IDを環境変数から取得（デフォルトはbanasuko-auth）
-    const projectId = c.env.FIREBASE_PROJECT_ID || 'banasuko-auth'
-    
-    // IDトークンを検証
-    const { payload } = await jwtVerify(idToken, JWKS, {
-      issuer: `https://securetoken.google.com/${projectId}`,
-      audience: projectId,
-    })
-    
-    const uid = payload.user_id as string
-    const email = payload.email as string
-    
-    console.log('Firebase ID token verified:', { uid, email })
-    
-    // 一旦シンプルな実装：IDトークン検証成功のみ返す
-    // Firestoreやセッション管理は後で追加
-    return c.json({
-      ok: true,
-      uid: uid,
-      email: email,
-      message: 'ID token verified successfully'
-    })
-    
-  } catch (error) {
-    console.error('Session creation error:', error)
-    
-    return c.json({ 
-      ok: false, 
-      message: error.message || 'Token verification failed'
-    }, 401)
-  }
-})
+// 注意: 古い認証エンドポイント(/api/auth/*)は削除されました
+// 新しい認証は /functions/api/session.ts で処理されます
 
 // セッション削除
 app.delete('/api/session', async (c) => {

@@ -1,5 +1,5 @@
 // Firebase Authentication JavaScript統合
-// バナスコAI - ログイン・登録機能 (Firebase CDN版)
+// バナスコAI - ログイン・登録機能 (Firebase v9 modular)
 
 // Firebase設定
 const firebaseConfig = {
@@ -12,10 +12,65 @@ const firebaseConfig = {
   measurementId: "G-09515RW8KC"
 };
 
+// Firebase v9 モジュラー式でインポート
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut 
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+// Firebase初期化
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
 // グローバル変数
 let currentUser = null;
 let isAuthReady = false;
-let auth = null;
+
+// 統一されたログイン関数
+export async function login(email, password) {
+  const { user } = await signInWithEmailAndPassword(auth, email.trim(), password);
+  const idToken = await user.getIdToken();
+
+  const res = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ idToken }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.ok) {
+    throw new Error(data?.message || `session failed (${res.status})`);
+  }
+  
+  console.log('Login successful:', data);
+  return data;
+}
+
+// 統一された登録関数
+export async function register(email, password) {
+  const { user } = await createUserWithEmailAndPassword(auth, email.trim(), password);
+  const idToken = await user.getIdToken();
+
+  const res = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ idToken }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.ok) {
+    throw new Error(data?.message || `session failed (${res.status})`);
+  }
+  
+  console.log('Register successful:', data);
+  return data;
+}
 
 // 認証状態管理
 class AuthManager {
@@ -29,30 +84,15 @@ class AuthManager {
     try {
       console.log('Firebase Auth 初期化中...');
       
-      // Firebase SDKの初期化を待機
-      await this.waitForFirebase();
-      
-      // Firebase初期化
-      const app = firebase.initializeApp(firebaseConfig);
-      auth = firebase.auth();
-      
       // 認証状態変更の監視
-      auth.onAuthStateChanged(async (user) => {
+      onAuthStateChanged(auth, async (user) => {
         if (user) {
           console.log('ユーザーログイン済み:', user.email);
           currentUser = user;
           
-          try {
-            // IDトークンを取得してサーバーに送信
-            const idToken = await user.getIdToken();
-            await this.sendTokenToServer(idToken);
-            
-            // ダッシュボードにリダイレクト
-            if (window.location.pathname === '/login') {
-              window.location.href = '/dashboard';
-            }
-          } catch (error) {
-            console.error('IDトークン処理エラー:', error);
+          // ダッシュボードにリダイレクト
+          if (window.location.pathname === '/login') {
+            window.location.href = '/dashboard';
           }
         } else {
           console.log('ユーザーログアウト状態');
@@ -71,52 +111,6 @@ class AuthManager {
     } catch (error) {
       console.error('Firebase Auth 初期化エラー:', error);
       this.showError('認証システムの初期化に失敗しました');
-    }
-  }
-
-  // Firebase SDKの読み込みを待機
-  async waitForFirebase() {
-    return new Promise((resolve) => {
-      if (typeof firebase !== 'undefined') {
-        resolve();
-        return;
-      }
-      
-      // Firebase SDKの読み込みを待機
-      const checkFirebase = () => {
-        if (typeof firebase !== 'undefined') {
-          resolve();
-        } else {
-          setTimeout(checkFirebase, 100);
-        }
-      };
-      
-      checkFirebase();
-    });
-  }
-
-  // IDトークンをサーバーに送信
-  async sendTokenToServer(idToken) {
-    try {
-      const response = await fetch('/api/session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idToken })
-      });
-
-      if (!response.ok) {
-        throw new Error(`サーバーエラー: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('サーバーセッション作成成功:', result);
-      
-      return result;
-    } catch (error) {
-      console.error('サーバーセッション作成エラー:', error);
-      throw error;
     }
   }
 
@@ -181,22 +175,10 @@ class AuthManager {
         passwordLength: password.length 
       });
 
-      // Firebaseでユーザー認証
-      const userCredential = await auth.signInWithEmailAndPassword(email, password);
-      const user = userCredential.user;
-      
-      console.log('Firebase認証成功:', user.email);
-      
-      // IDトークンを取得
-      const idToken = await user.getIdToken();
-      console.log('IDトークン取得成功');
-      
-      // サーバーにIDトークンを送信
-      await this.sendTokenToServer(idToken);
+      // 統一されたログイン関数を使用
+      await login(email, password);
       
       this.showSuccess('ログインに成功しました');
-      
-      // ダッシュボードにリダイレクト（onAuthStateChangedで自動的に実行される）
       
     } catch (error) {
       console.error('ログインエラー:', error);
@@ -204,33 +186,32 @@ class AuthManager {
       // Firebase認証エラーの詳細表示
       let errorMessage = 'ログインに失敗しました';
       
-      switch (error.code) {
-        case 'auth/invalid-credential':
-          errorMessage = 'メールアドレスまたはパスワードが正しくありません';
-          break;
-        case 'auth/user-not-found':
-          errorMessage = 'このメールアドレスのユーザーは見つかりませんでした';
-          break;
-        case 'auth/wrong-password':
-          errorMessage = 'パスワードが正しくありません';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'メールアドレスの形式が正しくありません';
-          break;
-        case 'auth/user-disabled':
-          errorMessage = 'このアカウントは無効化されています';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'ログイン試行回数が多すぎます。しばらく時間をおいて再試行してください';
-          break;
-        default:
-          errorMessage = `ログインエラー: ${error.code}\n${error.message}`;
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/invalid-credential':
+            errorMessage = 'メールアドレスまたはパスワードが正しくありません';
+            break;
+          case 'auth/user-not-found':
+            errorMessage = 'このメールアドレスのユーザーは見つかりませんでした';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = 'パスワードが正しくありません';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'メールアドレスの形式が正しくありません';
+            break;
+          case 'auth/user-disabled':
+            errorMessage = 'このアカウントは無効化されています';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'ログイン試行回数が多すぎます。しばらく時間をおいて再試行してください';
+            break;
+        }
+      } else if (error.message?.includes('session failed')) {
+        errorMessage = `セッション作成エラー: ${error.message}`;
       }
       
       this.showError(errorMessage);
-      
-      // アラートでも詳細エラーを表示（デバッグ用）
-      alert(`LOGIN ERROR: ${error.code}\nMESSAGE: ${error.message}`);
       
     } finally {
       if (loginBtn) {
@@ -275,40 +256,30 @@ class AuthManager {
         passwordLength: password.length 
       });
 
-      // Firebaseでユーザー作成
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      const user = userCredential.user;
-      
-      console.log('Firebase登録成功:', user.email);
-      
-      // IDトークンを取得
-      const idToken = await user.getIdToken();
-      console.log('IDトークン取得成功');
-      
-      // サーバーにIDトークンを送信
-      await this.sendTokenToServer(idToken);
+      // 統一された登録関数を使用
+      await register(email, password);
       
       this.showSuccess('アカウント登録に成功しました');
-      
-      // ダッシュボードにリダイレクト（onAuthStateChangedで自動的に実行される）
       
     } catch (error) {
       console.error('登録エラー:', error);
       
       let errorMessage = 'アカウント登録に失敗しました';
       
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'このメールアドレスは既に使用されています';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'メールアドレスの形式が正しくありません';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'パスワードが弱すぎます。より強力なパスワードを設定してください';
-          break;
-        default:
-          errorMessage = `登録エラー: ${error.code}\n${error.message}`;
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = 'このメールアドレスは既に使用されています';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'メールアドレスの形式が正しくありません';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'パスワードが弱すぎます。より強力なパスワードを設定してください';
+            break;
+        }
+      } else if (error.message?.includes('session failed')) {
+        errorMessage = `セッション作成エラー: ${error.message}`;
       }
       
       this.showError(errorMessage);
@@ -326,40 +297,24 @@ class AuthManager {
     const demoEmail = 'demo@banasuko.com';
     const demoPassword = 'demo123456';
     
-    try {
-      // デモアカウントが存在しない場合は作成を試行
-      try {
-        const userCredential = await auth.signInWithEmailAndPassword(demoEmail, demoPassword);
-        console.log('デモアカウントログイン成功');
-      } catch (error) {
-        if (error.code === 'auth/user-not-found') {
-          console.log('デモアカウントを作成中...');
-          const userCredential = await auth.createUserWithEmailAndPassword(demoEmail, demoPassword);
-          console.log('デモアカウント作成成功');
-        } else {
-          throw error;
-        }
-      }
-    } catch (error) {
-      console.error('デモログインエラー:', error);
-      this.showError('デモログインに失敗しました');
+    // フォームにデモ情報を設定
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    
+    if (emailInput && passwordInput) {
+      emailInput.value = demoEmail;
+      passwordInput.value = demoPassword;
+      
+      // ログイン実行
+      await this.handleLogin();
     }
   }
 
   // ログアウト処理
   async handleLogout() {
     try {
-      await auth.signOut();
+      await signOut(auth);
       console.log('ログアウト成功');
-      
-      // サーバーセッションも削除
-      try {
-        await fetch('/api/session', {
-          method: 'DELETE'
-        });
-      } catch (error) {
-        console.warn('サーバーセッション削除エラー:', error);
-      }
       
       this.showSuccess('ログアウトしました');
       
@@ -430,3 +385,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // グローバルに公開
 window.AuthManager = AuthManager;
+window.login = login;
+window.register = register;
