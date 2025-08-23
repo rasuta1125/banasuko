@@ -102,7 +102,8 @@ export const LoginPage = () => {
               </div>
             </div>
             <button 
-              id="demoLoginButton"
+              type="button"
+              id="demoLoginBtn"
               class="w-full py-2 bg-cyber-blue/20 border border-cyber-blue/30 rounded-lg text-cyber-blue font-medium hover:bg-cyber-blue/30 transition-all duration-300"
             >
               <i class="fas fa-magic mr-2"></i>デモアカウントでログイン
@@ -130,28 +131,14 @@ export const LoginPage = () => {
             <p class="text-gray-400">バナスコAIアカウント作成</p>
           </div>
           
-          <form id="registerFormElement" class="space-y-6">
+          <form id="registerForm" class="space-y-6">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">
-                <i class="fas fa-user mr-2 text-cyber-pink"></i>ユーザー名
-              </label>
-              <input 
-                type="text" 
-                id="regUsername"
-                name="username"
-                class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-cyber-pink focus:ring-2 focus:ring-cyber-pink/20 transition-all duration-300"
-                placeholder="ユーザー名を入力"
-                required
-              />
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                <i class="fas fa-envelope mr-2 text-cyber-pink"></i>メールアドレス
+                <i class="fas-envelope mr-2 text-cyber-pink"></i>メールアドレス
               </label>
               <input 
                 type="email" 
-                id="regEmail"
+                id="registerEmail"
                 name="email"
                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-cyber-pink focus:ring-2 focus:ring-cyber-pink/20 transition-all duration-300"
                 placeholder="メールアドレスを入力"
@@ -165,10 +152,24 @@ export const LoginPage = () => {
               </label>
               <input 
                 type="password" 
-                id="regPassword"
+                id="registerPassword"
                 name="password"
                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-cyber-pink focus:ring-2 focus:ring-cyber-pink/20 transition-all duration-300"
                 placeholder="パスワードを入力"
+                required
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                <i class="fas fa-lock mr-2 text-cyber-pink"></i>パスワード（確認）
+              </label>
+              <input 
+                type="password" 
+                id="confirmPassword"
+                name="confirmPassword"
+                class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-cyber-pink focus:ring-2 focus:ring-cyber-pink/20 transition-all duration-300"
+                placeholder="パスワードを再入力"
                 required
               />
             </div>
@@ -247,6 +248,10 @@ export const LoginPage = () => {
         <div class="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-cyber-green rounded-full animate-ping opacity-25 delay-2000"></div>
       </div>
 
+      {/* Firebase SDK */}
+      <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+      <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+      
       {/* Firebase Authentication JavaScript */}
       <script src="/static/js/auth.js"></script>
     </div>

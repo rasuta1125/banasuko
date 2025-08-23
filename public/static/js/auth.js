@@ -1,15 +1,5 @@
 // Firebase Authentication JavaScript統合
-// バナスコAI - ログイン・登録機能 (Firebaseクライアント側認証版)
-
-// Firebase CDN Imports (Firebase v9 modular SDK)
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut 
-} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+// バナスコAI - ログイン・登録機能 (Firebase CDN版)
 
 // Firebase設定
 const firebaseConfig = {
@@ -22,13 +12,10 @@ const firebaseConfig = {
   measurementId: "G-09515RW8KC"
 };
 
-// Firebase初期化
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
 // グローバル変数
 let currentUser = null;
 let isAuthReady = false;
+let auth = null;
 
 // 認証状態管理
 class AuthManager {
@@ -42,8 +29,15 @@ class AuthManager {
     try {
       console.log('Firebase Auth 初期化中...');
       
+      // Firebase SDKの初期化を待機
+      await this.waitForFirebase();
+      
+      // Firebase初期化
+      const app = firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      
       // 認証状態変更の監視
-      onAuthStateChanged(auth, async (user) => {
+      auth.onAuthStateChanged(async (user) => {
         if (user) {
           console.log('ユーザーログイン済み:', user.email);
           currentUser = user;
@@ -78,6 +72,27 @@ class AuthManager {
       console.error('Firebase Auth 初期化エラー:', error);
       this.showError('認証システムの初期化に失敗しました');
     }
+  }
+
+  // Firebase SDKの読み込みを待機
+  async waitForFirebase() {
+    return new Promise((resolve) => {
+      if (typeof firebase !== 'undefined') {
+        resolve();
+        return;
+      }
+      
+      // Firebase SDKの読み込みを待機
+      const checkFirebase = () => {
+        if (typeof firebase !== 'undefined') {
+          resolve();
+        } else {
+          setTimeout(checkFirebase, 100);
+        }
+      };
+      
+      checkFirebase();
+    });
   }
 
   // IDトークンをサーバーに送信
@@ -167,7 +182,7 @@ class AuthManager {
       });
 
       // Firebaseでユーザー認証
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const user = userCredential.user;
       
       console.log('Firebase認証成功:', user.email);
@@ -261,7 +276,7 @@ class AuthManager {
       });
 
       // Firebaseでユーザー作成
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
       
       console.log('Firebase登録成功:', user.email);
@@ -311,23 +326,30 @@ class AuthManager {
     const demoEmail = 'demo@banasuko.com';
     const demoPassword = 'demo123456';
     
-    // フォームにデモ情報を設定
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    if (emailInput && passwordInput) {
-      emailInput.value = demoEmail;
-      passwordInput.value = demoPassword;
-      
-      // ログイン実行
-      await this.handleLogin();
+    try {
+      // デモアカウントが存在しない場合は作成を試行
+      try {
+        const userCredential = await auth.signInWithEmailAndPassword(demoEmail, demoPassword);
+        console.log('デモアカウントログイン成功');
+      } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+          console.log('デモアカウントを作成中...');
+          const userCredential = await auth.createUserWithEmailAndPassword(demoEmail, demoPassword);
+          console.log('デモアカウント作成成功');
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      console.error('デモログインエラー:', error);
+      this.showError('デモログインに失敗しました');
     }
   }
 
   // ログアウト処理
   async handleLogout() {
     try {
-      await signOut(auth);
+      await auth.signOut();
       console.log('ログアウト成功');
       
       // サーバーセッションも削除
