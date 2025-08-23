@@ -25,26 +25,8 @@ export const db = getFirestore(app)
 // Analytics (ブラウザ環境でのみ)
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null
 
-// 開発環境でのエミュレーター接続（必要に応じて）
-if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-  // Auth Emulator
-  try {
-    if (!auth.config.emulator) {
-      connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true })
-    }
-  } catch (error) {
-    // Emulator not running, use production
-  }
-  
-  // Firestore Emulator
-  try {
-    if (!(db as any)._delegate._databaseId.projectId.includes('(default)')) {
-      connectFirestoreEmulator(db, 'localhost', 8080)
-    }
-  } catch (error) {
-    // Emulator not running, use production
-  }
-}
+// 本番環境では Firebase Emulator は使用しない（Cloudflare Pages対応）
+// 開発時のローカルエミュレーター設定はローカル開発環境でのみ有効
 
 // ユーザータイプ定義
 export interface User {

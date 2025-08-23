@@ -122,7 +122,7 @@ export async function handleDemoLogin(c: Context) {
     setCookie(c, 'auth-token', token, {
       maxAge: 7 * 24 * 60 * 60,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Cloudflare Pages は常にHTTPS
       sameSite: 'Lax'
     })
     
@@ -157,7 +157,7 @@ export async function handleFirebaseLogin(c: Context) {
     setCookie(c, 'auth-token', token, {
       maxAge: 7 * 24 * 60 * 60,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Cloudflare Pages は常にHTTPS
       sameSite: 'Lax'
     })
     
@@ -192,7 +192,7 @@ export async function handleFirebaseRegister(c: Context) {
     setCookie(c, 'auth-token', token, {
       maxAge: 7 * 24 * 60 * 60,
       httpOnly: true, 
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Cloudflare Pages は常にHTTPS
       sameSite: 'Lax'
     })
     

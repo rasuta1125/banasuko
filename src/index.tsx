@@ -130,7 +130,7 @@ app.post('/api/session', async (c) => {
     const { idToken } = await c.req.json().catch(() => ({}))
     
     if (!idToken) {
-      return c.json({ success: false, error: 'IDトークンが必要です' }, 400)
+      return c.json({ ok: false, message: 'idToken required' }, 400)
     }
     
     // joseを使用してFirebase IDトークンを検証
@@ -155,50 +155,21 @@ app.post('/api/session', async (c) => {
     
     console.log('Firebase ID token verified:', { uid, email })
     
-    // Firestoreからユーザー情報を取得または作成
-    let user = await UserService.getUserById(uid).catch(() => null)
-    
-    if (!user) {
-      // 新規ユーザーの場合、Firestoreに作成
-      user = await UserService.createUserFromFirebaseAuth(uid, email || 'unknown@example.com')
-    }
-    
-    // 最終ログイン時刻を更新
-    await UserService.updateLastLogin(uid)
-    
-    // セッショントークンを生成
-    const { generateAuthToken } = await import('./lib/authMiddleware')
-    const sessionToken = generateAuthToken(user)
-    
-    // クッキーに保存
-    const { setCookie } = await import('hono/cookie')
-    setCookie(c, 'auth-token', sessionToken, {
-      maxAge: 7 * 24 * 60 * 60, // 7日間
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax'
-    })
-    
+    // 一旦シンプルな実装：IDトークン検証成功のみ返す
+    // Firestoreやセッション管理は後で追加
     return c.json({
-      success: true,
-      user: user,
-      message: 'セッションが作成されました'
+      ok: true,
+      uid: uid,
+      email: email,
+      message: 'ID token verified successfully'
     })
     
   } catch (error) {
     console.error('Session creation error:', error)
     
-    let errorMessage = 'セッション作成に失敗しました'
-    if (error.message?.includes('expired')) {
-      errorMessage = 'IDトークンが期限切れです。再度ログインしてください'
-    } else if (error.message?.includes('invalid')) {
-      errorMessage = '無効なIDトークンです'
-    }
-    
     return c.json({ 
-      success: false, 
-      error: errorMessage,
-      details: error.message
+      ok: false, 
+      message: error.message || 'Token verification failed'
     }, 401)
   }
 })
@@ -532,12 +503,10 @@ app.post('/api/analysis/single', async (c) => {
 
     // 環境変数デバッグ（Cloudflare Pages対応）
     console.log('Environment check:', {
-      hasOpenAIKey_process: !!process.env.OPENAI_API_KEY,
       hasOpenAIKey_context: !!c.env.OPENAI_API_KEY,
       keyLength_context: c.env.OPENAI_API_KEY?.length || 0,
       keyPrefix_context: c.env.OPENAI_API_KEY?.substring(0, 15) + '...',
-      keyType_context: typeof c.env.OPENAI_API_KEY,
-      nodeEnv: process.env.NODE_ENV
+      keyType_context: typeof c.env.OPENAI_API_KEY
     });
 
     // フォームデータから画像ファイルを取得
