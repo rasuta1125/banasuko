@@ -151,6 +151,12 @@ class AuthManager {
     const email = formData.get('email');
     const password = formData.get('password');
     
+    // 入力値チェック
+    if (!email || !password) {
+      this.showError('メールアドレスとパスワードを入力してください');
+      return;
+    }
+    
     // デモアカウントかどうかを判定
     const isDemo = email === 'demo@banasuko.com' && password === 'demo123';
     
@@ -159,6 +165,8 @@ class AuthManager {
       password: password,
       username: isDemo ? 'demo' : email.split('@')[0] // デモログイン用またはemail prefix
     };
+
+    console.log('ログイン試行:', { email: email, isDemo: isDemo });
 
     this.setLoading(true, 'ログイン');
 
@@ -183,7 +191,20 @@ class AuthManager {
           window.location.href = '/analysis';
         }, 1000);
       } else {
-        this.showError(data.error || 'ログインに失敗しました');
+        // Firebase エラーメッセージを分かりやすく変換
+        let errorMessage = data.error || 'ログインに失敗しました';
+        
+        if (errorMessage.includes('invalid-credential')) {
+          errorMessage = 'メールアドレスまたはパスワードが正しくありません。アカウントをお持ちでない場合は「新規アカウント作成」をクリックしてください。';
+        } else if (errorMessage.includes('user-not-found')) {
+          errorMessage = 'このメールアドレスは登録されていません。「新規アカウント作成」からアカウントを作成してください。';
+        } else if (errorMessage.includes('wrong-password')) {
+          errorMessage = 'パスワードが正しくありません。';
+        } else if (errorMessage.includes('too-many-requests')) {
+          errorMessage = 'ログイン試行回数が多すぎます。しばらく待ってから再試行してください。';
+        }
+        
+        this.showError(errorMessage);
       }
     } catch (error) {
       console.error('ログインエラー:', error);
@@ -251,6 +272,50 @@ class AuthManager {
 
   // デモログイン処理
   async handleDemoLogin(event) {
+    event.preventDefault();
+    
+    // デモアカウント情報をフォームに直接送信
+    const demoLoginData = {
+      email: 'demo@banasuko.com',
+      password: 'demo123',
+      username: 'demo'
+    };
+
+    this.setLoading(true, 'demo');
+
+    try {
+      const response = await fetch('/api/auth/login', {  // 通常のログインAPIを使用
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(demoLoginData),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        this.showSuccess('デモログインしました！');
+        currentUser = data.user;
+        
+        // ページリダイレクト
+        setTimeout(() => {
+          window.location.href = '/analysis';
+        }, 1000);
+      } else {
+        this.showError(data.error || 'デモログインに失敗しました');
+      }
+    } catch (error) {
+      console.error('デモログインエラー:', error);
+      this.showError('ネットワークエラーが発生しました');
+    } finally {
+      this.setLoading(false, 'demo');
+    }
+  }
+
+  // 旧デモログイン処理（フォールバック用）
+  async handleDemoLoginOld(event) {
     event.preventDefault();
     
     // デモアカウント情報をフォームに自動入力

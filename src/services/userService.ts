@@ -81,7 +81,10 @@ export class UserService {
   // ユーザーログイン
   static async loginUser(email: string, password: string): Promise<User> {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      // デバッグ用：Firebase認証詳細エラー情報
+      console.log('Firebase login attempt:', { email: email.trim(), passwordLength: password.length })
+      
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password)
       const firebaseUser = userCredential.user
 
       // 最終ログイン時刻を更新
@@ -93,9 +96,17 @@ export class UserService {
       console.log('User logged in successfully:', userData.uid)
       return userData
 
-    } catch (error) {
-      console.error('User login error:', error)
-      throw error
+    } catch (e: any) {
+      // 詳細なエラー情報をアラート表示
+      const errorMessage = `LOGIN ERROR: ${e.code}\nMESSAGE: ${e.message}`
+      console.error('LOGIN ERROR', e)
+      
+      // ブラウザでも確認できるようにアラート表示
+      if (typeof window !== 'undefined') {
+        alert(errorMessage)
+      }
+      
+      throw e
     }
   }
 
