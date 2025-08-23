@@ -158,6 +158,33 @@ export class UserService {
     }
   }
 
+  // Firebase認証からユーザー作成（IDトークン検証後）
+  static async createUserFromFirebaseAuth(uid: string, email: string, displayName?: string): Promise<User> {
+    try {
+      const userData: any = {
+        uid: uid,
+        email: email,
+        username: email.split('@')[0], // メールアドレスからユーザー名生成
+        displayName: displayName || email.split('@')[0],
+        plan: 'free', // デフォルトはフリープラン
+        usageCount: 0,
+        maxUsage: DEFAULT_PLANS.free.maxUsage,
+        createdAt: Timestamp.now(),
+        lastLoginAt: Timestamp.now(),
+        isActive: true
+      }
+
+      await setDoc(doc(db, 'users', uid), userData)
+      
+      console.log('User created from Firebase Auth:', uid)
+      return userData as User
+
+    } catch (error) {
+      console.error('Create user from Firebase Auth error:', error)
+      throw error
+    }
+  }
+
   // 最終ログイン時刻更新
   static async updateLastLogin(uid: string): Promise<void> {
     try {

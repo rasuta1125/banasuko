@@ -123,6 +123,114 @@ app.post('/api/auth/register', handleFirebaseRegister)
 // ログアウト
 app.post('/api/auth/logout', handleLogout)
 
+// Firebase IDトークン検証セッション作成
+app.post('/api/session', async (c) => {
+  try {
+    const { idToken } = await c.req.json()
+    
+    if (!idToken) {
+      return c.json({ success: false, error: 'IDトークンが必要です' }, 400)
+    }
+    
+    // Firebase Admin SDKでIDトークンを検証
+    const admin = await import('firebase-admin')
+    
+    // Firebase Admin初期化（既に初期化されている場合はスキップ）
+    if (!admin.getApps().length) {
+      // Cloudflare環境では、サービスアカウントキーを環境変数から取得
+      const serviceAccount = {
+        type: "service_account",
+        project_id: "banasuko-auth",
+        private_key_id: c.env.FIREBASE_PRIVATE_KEY_ID,
+        private_key: c.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        client_email: c.env.FIREBASE_CLIENT_EMAIL,
+        client_id: c.env.FIREBASE_CLIENT_ID,
+        auth_uri: "https://accounts.google.com/o/oauth2/auth",
+        token_uri: "https://oauth2.googleapis.com/token",
+        auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+        client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${c.env.FIREBASE_CLIENT_EMAIL}`
+      }
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount as any),
+        projectId: "banasuko-auth"
+      })
+    }
+    
+    // IDトークンを検証
+    const decodedToken = await admin.auth().verifyIdToken(idToken)
+    const uid = decodedToken.uid
+    const email = decodedToken.email
+    
+    console.log('Firebase ID token verified:', { uid, email })
+    
+    // Firestoreからユーザー情報を取得または作成
+    let user = await UserService.getUserById(uid).catch(() => null)
+    
+    if (!user) {
+      // 新規ユーザーの場合、Firestoreに作成
+      user = await UserService.createUserFromFirebaseAuth(uid, email || 'unknown@example.com')
+    }
+    
+    // 最終ログイン時刻を更新
+    await UserService.updateLastLogin(uid)
+    
+    // セッショントークンを生成
+    const { generateAuthToken } = await import('./lib/authMiddleware')
+    const sessionToken = generateAuthToken(user)
+    
+    // クッキーに保存
+    const { setCookie } = await import('hono/cookie')
+    setCookie(c, 'auth-token', sessionToken, {
+      maxAge: 7 * 24 * 60 * 60, // 7日間
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax'
+    })
+    
+    return c.json({
+      success: true,
+      user: user,
+      message: 'セッションが作成されました'
+    })
+    
+  } catch (error) {
+    console.error('Session creation error:', error)
+    
+    let errorMessage = 'セッション作成に失敗しました'
+    if (error.code === 'auth/id-token-expired') {
+      errorMessage = 'IDトークンが期限切れです。再度ログインしてください'
+    } else if (error.code === 'auth/invalid-id-token') {
+      errorMessage = '無効なIDトークンです'
+    }
+    
+    return c.json({ 
+      success: false, 
+      error: errorMessage 
+    }, 401)
+  }
+})
+
+// セッション削除
+app.delete('/api/session', async (c) => {
+  try {
+    // クッキー削除
+    const { deleteCookie } = await import('hono/cookie')
+    deleteCookie(c, 'auth-token')
+    
+    return c.json({
+      success: true,
+      message: 'セッションが削除されました'
+    })
+  } catch (error) {
+    console.error('Session deletion error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'セッション削除に失敗しました' 
+    }, 500)
+  }
+})
+
 // ユーザー情報取得
 app.get('/api/auth/user', async (c) => {
   const user = c.get('user')
