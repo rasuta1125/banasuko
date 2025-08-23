@@ -5,7 +5,8 @@ import { serveStatic } from 'hono/cloudflare-workers'
 // Cloudflare Pages Bindings型定義
 type Env = { 
   OPENAI_API_KEY: string
-  PING: string 
+  PING: string
+  FIREBASE_PROJECT_ID: string
 }
 import { renderer } from './renderer'
 import { HomePage } from './components/HomePage'
@@ -123,44 +124,34 @@ app.post('/api/auth/register', handleFirebaseRegister)
 // ログアウト
 app.post('/api/auth/logout', handleLogout)
 
-// Firebase IDトークン検証セッション作成
+// Firebase IDトークン検証セッション作成（jose実装 - Cloudflare Workers対応）
 app.post('/api/session', async (c) => {
   try {
-    const { idToken } = await c.req.json()
+    const { idToken } = await c.req.json().catch(() => ({}))
     
     if (!idToken) {
       return c.json({ success: false, error: 'IDトークンが必要です' }, 400)
     }
     
-    // Firebase Admin SDKでIDトークンを検証
-    const admin = await import('firebase-admin')
+    // joseを使用してFirebase IDトークンを検証
+    const { jwtVerify, createRemoteJWKSet } = await import('jose')
     
-    // Firebase Admin初期化（既に初期化されている場合はスキップ）
-    if (!admin.getApps().length) {
-      // Cloudflare環境では、サービスアカウントキーを環境変数から取得
-      const serviceAccount = {
-        type: "service_account",
-        project_id: "banasuko-auth",
-        private_key_id: c.env.FIREBASE_PRIVATE_KEY_ID,
-        private_key: c.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        client_email: c.env.FIREBASE_CLIENT_EMAIL,
-        client_id: c.env.FIREBASE_CLIENT_ID,
-        auth_uri: "https://accounts.google.com/o/oauth2/auth",
-        token_uri: "https://oauth2.googleapis.com/token",
-        auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-        client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${c.env.FIREBASE_CLIENT_EMAIL}`
-      }
-      
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as any),
-        projectId: "banasuko-auth"
-      })
-    }
+    // Firebase公開鍵（JWKS）
+    const JWKS = createRemoteJWKSet(
+      new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+    )
+    
+    // Firebase Project IDを環境変数から取得（デフォルトはbanasuko-auth）
+    const projectId = c.env.FIREBASE_PROJECT_ID || 'banasuko-auth'
     
     // IDトークンを検証
-    const decodedToken = await admin.auth().verifyIdToken(idToken)
-    const uid = decodedToken.uid
-    const email = decodedToken.email
+    const { payload } = await jwtVerify(idToken, JWKS, {
+      issuer: `https://securetoken.google.com/${projectId}`,
+      audience: projectId,
+    })
+    
+    const uid = payload.user_id as string
+    const email = payload.email as string
     
     console.log('Firebase ID token verified:', { uid, email })
     
@@ -198,15 +189,16 @@ app.post('/api/session', async (c) => {
     console.error('Session creation error:', error)
     
     let errorMessage = 'セッション作成に失敗しました'
-    if (error.code === 'auth/id-token-expired') {
+    if (error.message?.includes('expired')) {
       errorMessage = 'IDトークンが期限切れです。再度ログインしてください'
-    } else if (error.code === 'auth/invalid-id-token') {
+    } else if (error.message?.includes('invalid')) {
       errorMessage = '無効なIDトークンです'
     }
     
     return c.json({ 
       success: false, 
-      error: errorMessage 
+      error: errorMessage,
+      details: error.message
     }, 401)
   }
 })
