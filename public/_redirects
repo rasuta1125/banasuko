@@ -1,0 +1,11 @@
+# Cloudflare Pages redirects
+
+# SPA routing - serve index.html for non-API routes
+/dashboard   /dashboard.html   200
+/login       /login.html       200
+
+# API routes should go to the Functions
+/api/*       /api/:splat       200
+
+# Fallback for all other routes
+/*           /index.html       200

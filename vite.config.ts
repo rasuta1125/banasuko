@@ -20,5 +20,6 @@ export default defineConfig({
         main: 'src/index.tsx'
       }
     }
-  }
+  },
+  publicDir: 'public'
 })
