@@ -4,6 +4,9 @@
     "/api/*"
   ],
   "exclude": [
+    "/",
+    "/login*",
+    "/dashboard*",
     "/static/*",
     "/js/*",
     "/css/*",
@@ -17,6 +20,7 @@
     "/*.webp",
     "/*.woff*",
     "/*.ttf",
-    "/*.eot"
+    "/*.eot",
+    "/*.html"
   ]
 }
