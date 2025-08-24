@@ -1,17 +1,27 @@
-// functions/api/session.ts
-import { Hono } from 'hono';
-import { jwtVerify, createRemoteJWKSet } from 'jose';
+// Firebase セッション管理API
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { jwtVerify, createRemoteJWKSet } from 'jose'
 
-type Env = { FIREBASE_PROJECT_ID: string };
+// Cloudflare Pages Bindings型定義
+type Env = { 
+  OPENAI_API_KEY: string
+  PING: string
+  FIREBASE_PROJECT_ID: string
+}
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env }>()
+
+// CORS設定
+app.use('*', cors())
 
 // Google Secure Token のJWK
 const JWKS = createRemoteJWKSet(
   new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
 );
 
-app.post(async (c) => {
+// セッション作成
+app.post('/', async (c) => {
   // body 安全に取得
   let idToken: string | undefined;
   try {
@@ -44,12 +54,32 @@ app.post(async (c) => {
   }
 });
 
-// CORSが必要なら（同一オリジンなら不要）
-app.options((c) => {
+// CORS for session endpoint
+app.options('/', (c) => {
   c.header('Access-Control-Allow-Origin', c.req.header('Origin') || '*');
   c.header('Access-Control-Allow-Headers', 'content-type');
   c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
   return c.body(null, 204);
 });
 
-export const onRequest = app.fetch;
+// セッション削除
+app.delete('/', async (c) => {
+  try {
+    // クッキー削除
+    const { deleteCookie } = await import('hono/cookie')
+    deleteCookie(c, 'auth-token')
+    
+    return c.json({
+      success: true,
+      message: 'セッションが削除されました'
+    })
+  } catch (error) {
+    console.error('Session deletion error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'セッション削除に失敗しました' 
+    }, 500)
+  }
+})
+
+export default app

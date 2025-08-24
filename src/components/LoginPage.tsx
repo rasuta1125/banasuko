@@ -12,6 +12,22 @@ export const LoginPage = () => {
             <p class="text-gray-400">バナスコAIにアクセス</p>
           </div>
           
+          {/* Error Message */}
+          <div id="errorMessage" class="hidden bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+            <div class="flex items-center text-red-400">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              <span id="errorText">エラーメッセージ</span>
+            </div>
+          </div>
+          
+          {/* Success Message */}
+          <div id="successMessage" class="hidden bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+            <div class="flex items-center text-green-400">
+              <i class="fas fa-check-circle mr-2"></i>
+              <span id="successText">ログイン成功</span>
+            </div>
+          </div>
+          
           {/* Login Form */}
           <form id="loginForm" class="space-y-6">
             <div>
@@ -41,22 +57,6 @@ export const LoginPage = () => {
                 placeholder="パスワードを入力"
                 required
               />
-            </div>
-            
-            {/* Error Message */}
-            <div id="errorMessage" class="hidden bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-              <div class="flex items-center text-red-400">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                <span id="errorText">エラーメッセージ</span>
-              </div>
-            </div>
-            
-            {/* Success Message */}
-            <div id="successMessage" class="hidden bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-              <div class="flex items-center text-green-400">
-                <i class="fas fa-check-circle mr-2"></i>
-                <span id="successText">ログイン成功</span>
-              </div>
             </div>
             
             {/* Login Button */}
@@ -97,17 +97,26 @@ export const LoginPage = () => {
                 </div>
                 <div>
                   <span class="text-gray-400">パスワード:</span>
-                  <div class="text-cyber-blue font-mono font-semibold">demo123</div>
+                  <div class="text-cyber-blue font-mono font-semibold">demo123456</div>
                 </div>
               </div>
             </div>
-            <button 
-              type="button"
-              id="demoLoginBtn"
-              class="w-full py-2 bg-cyber-blue/20 border border-cyber-blue/30 rounded-lg text-cyber-blue font-medium hover:bg-cyber-blue/30 transition-all duration-300"
-            >
-              <i class="fas fa-magic mr-2"></i>デモアカウントでログイン
-            </button>
+            <div class="space-y-2">
+              <button 
+                type="button"
+                id="demoLoginBtn"
+                class="w-full py-2 bg-cyber-blue/20 border border-cyber-blue/30 rounded-lg text-cyber-blue font-medium hover:bg-cyber-blue/30 transition-all duration-300"
+              >
+                <i class="fas fa-magic mr-2"></i>デモアカウントでログイン
+              </button>
+              <button 
+                type="button"
+                id="createDemoBtn"
+                class="w-full py-2 bg-cyber-pink/20 border border-cyber-pink/30 rounded-lg text-cyber-pink font-medium hover:bg-cyber-pink/30 transition-all duration-300"
+              >
+                <i class="fas fa-user-plus mr-2"></i>デモアカウント作成
+              </button>
+            </div>
           </div>
           
           {/* Register Link */}
@@ -131,10 +140,10 @@ export const LoginPage = () => {
             <p class="text-gray-400">バナスコAIアカウント作成</p>
           </div>
           
-          <form id="registerForm" class="space-y-6">
+          <form id="registerFormElement" class="space-y-6">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">
-                <i class="fas-envelope mr-2 text-cyber-pink"></i>メールアドレス
+                <i class="fas fa-envelope mr-2 text-cyber-pink"></i>メールアドレス
               </label>
               <input 
                 type="email" 
@@ -247,179 +256,9 @@ export const LoginPage = () => {
         <div class="absolute top-3/4 right-1/4 w-1 h-1 bg-cyber-pink rounded-full animate-ping opacity-30 delay-1000"></div>
         <div class="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-cyber-green rounded-full animate-ping opacity-25 delay-2000"></div>
       </div>
-
-      {/* Firebase SDK */}
-      <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-      <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
       
-      {/* Firebase Authentication JavaScript - Inline for debugging */}
-      <script>{`
-        // Firebase設定
-        const firebaseConfig = {
-          apiKey: "AIzaSyAflp1vqSA21sSYihZDTpje-MB1mCALxBs",
-          authDomain: "banasuko-auth.firebaseapp.com",
-          projectId: "banasuko-auth",
-          storageBucket: "banasuko-auth.firebasestorage.app",
-          messagingSenderId: "753581941845",
-          appId: "1:753581941845:web:18418afb254c309933e0dc"
-        };
-
-        let currentUser = null;
-        let isAuthReady = false;
-        let auth = null;
-
-        // Firebase初期化関数
-        async function initializeFirebaseAuth() {
-          try {
-            console.log('Firebase Auth 初期化中...');
-            
-            // Firebase SDKの読み込み待機
-            if (typeof firebase === 'undefined') {
-              console.error('Firebase SDK not loaded');
-              return;
-            }
-            
-            // Firebase初期化
-            const app = firebase.initializeApp(firebaseConfig);
-            auth = firebase.auth();
-            
-            // 認証状態変更監視
-            auth.onAuthStateChanged(async (user) => {
-              if (user) {
-                console.log('ユーザーログイン済み:', user.email);
-                currentUser = user;
-                
-                try {
-                  const idToken = await user.getIdToken();
-                  await sendTokenToServer(idToken);
-                  
-                  if (window.location.pathname === '/login') {
-                    window.location.href = '/dashboard';
-                  }
-                } catch (error) {
-                  console.error('IDトークン処理エラー:', error);
-                }
-              } else {
-                console.log('ユーザーログアウト状態');
-                currentUser = null;
-              }
-              
-              isAuthReady = true;
-            });
-            
-            console.log('Firebase Auth 初期化完了');
-          } catch (error) {
-            console.error('Firebase Auth 初期化エラー:', error);
-            alert('認証システムの初期化に失敗しました: ' + error.message);
-          }
-        }
-
-        // IDトークンをサーバーに送信
-        async function sendTokenToServer(idToken) {
-          try {
-            const response = await fetch('/api/session', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ idToken })
-            });
-
-            if (!response.ok) {
-              throw new Error(\`サーバーエラー: \${response.status}\`);
-            }
-
-            const result = await response.json();
-            console.log('サーバーセッション作成成功:', result);
-            return result;
-          } catch (error) {
-            console.error('サーバーセッション作成エラー:', error);
-            throw error;
-          }
-        }
-
-        // ログイン処理
-        async function handleLogin() {
-          const email = document.getElementById('email')?.value.trim();
-          const password = document.getElementById('password')?.value;
-
-          if (!email || !password) {
-            alert('メールアドレスとパスワードを入力してください');
-            return;
-          }
-
-          try {
-            console.log('Firebase login attempt:', { email, passwordLength: password.length });
-
-            const userCredential = await auth.signInWithEmailAndPassword(email, password);
-            const user = userCredential.user;
-            
-            console.log('Firebase認証成功:', user.email);
-            
-            const idToken = await user.getIdToken();
-            await sendTokenToServer(idToken);
-            
-            alert('ログインに成功しました');
-          } catch (error) {
-            console.error('ログインエラー:', error);
-            
-            let errorMessage = 'ログインに失敗しました';
-            switch (error.code) {
-              case 'auth/invalid-credential':
-                errorMessage = 'メールアドレスまたはパスワードが正しくありません';
-                break;
-              case 'auth/user-not-found':
-                errorMessage = 'このメールアドレスのユーザーは見つかりませんでした';
-                break;
-              case 'auth/wrong-password':
-                errorMessage = 'パスワードが正しくありません';
-                break;
-              default:
-                errorMessage = \`ログインエラー: \${error.code} - \${error.message}\`;
-            }
-            
-            alert(\`LOGIN ERROR: \${error.code}\\nMESSAGE: \${error.message}\`);
-          }
-        }
-
-        // デモログイン処理
-        async function handleDemoLogin() {
-          const emailInput = document.getElementById('email');
-          const passwordInput = document.getElementById('password');
-          
-          if (emailInput && passwordInput) {
-            emailInput.value = 'demo@banasuko.com';
-            passwordInput.value = 'demo123456';
-            
-            await handleLogin();
-          }
-        }
-
-        // イベントリスナー設定
-        document.addEventListener('DOMContentLoaded', () => {
-          console.log('認証システム初期化開始');
-          
-          // Firebase初期化
-          setTimeout(() => {
-            initializeFirebaseAuth();
-          }, 1000);
-
-          // ログインフォーム
-          const loginForm = document.getElementById('loginForm');
-          if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
-              e.preventDefault();
-              handleLogin();
-            });
-          }
-
-          // デモログインボタン
-          const demoLoginBtn = document.getElementById('demoLoginBtn');
-          if (demoLoginBtn) {
-            demoLoginBtn.addEventListener('click', () => {
-              handleDemoLogin();
-            });
-          }
-        });
-      `}</script>
+      {/* Client-side Firebase Authentication */}
+      <script type="module" src="/static/js/firebase-auth.js"></script>
     </div>
   )
 }

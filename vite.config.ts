@@ -7,17 +7,18 @@ export default defineConfig({
   plugins: [
     build({
       generateRoutes: true,
-      outputDir: 'dist'
+      outputDir: 'dist',
+      entry: 'src/app.tsx'
     }),
     devServer({
       adapter,
-      entry: 'src/index.tsx'
+      entry: 'src/app.tsx'
     })
   ],
   build: {
     rollupOptions: {
       input: {
-        main: 'src/index.tsx'
+        main: 'src/app.tsx'
       }
     }
   },
