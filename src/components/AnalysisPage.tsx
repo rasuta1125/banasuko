@@ -273,6 +273,7 @@ export const AnalysisPage = () => {
         <div class="text-center mb-12">
           <button 
             id="analyzeButton" 
+            onclick="startSingleAnalysis()"
             disabled
             class="px-12 py-4 bg-gradient-to-r from-cyber-blue to-cyber-purple rounded-full text-white font-bold text-lg shadow-2xl hover:shadow-cyber-blue/50 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
@@ -287,6 +288,7 @@ export const AnalysisPage = () => {
         
         {/* Results Section */}
         <div id="resultsSection" class="hidden">
+          <div id="analysisResult"></div>
           {/* Single Analysis Results */}
           <div id="singleResults" class="hidden">
             <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-green/20 p-8 mb-8 animate-slide-up">
@@ -758,7 +760,7 @@ export const AnalysisPage = () => {
       }} />
       
       {/* 分析ページ専用JavaScript */}
-      <script src="/js/analysis.js"></script>
+      <script src="/static/js/analysis.js"></script>
     </div>
   )
 }

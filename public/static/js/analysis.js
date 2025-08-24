@@ -378,7 +378,7 @@ class AnalysisManager {
   // 単一画像分析実行
   async startSingleAnalysis() {
     const imagePreview = document.getElementById('previewImage');
-    const analyzeBtn = document.getElementById('analyzeSingleBtn');
+    const analyzeBtn = document.getElementById('analyzeButton');
     
     if (!imagePreview || !imagePreview.src || imagePreview.src === '') {
       this.showError('分析する画像をアップロードしてください');
@@ -495,8 +495,28 @@ class AnalysisManager {
 
   // 単一分析結果表示
   displaySingleResult(result) {
-    const resultSection = document.getElementById('analysisResult');
-    if (!resultSection) return;
+    // 既存の結果セクションを表示
+    const resultsSection = document.getElementById('resultsSection');
+    const singleResults = document.getElementById('singleResults');
+    
+    if (resultsSection) {
+      resultsSection.classList.remove('hidden');
+    }
+    if (singleResults) {
+      singleResults.classList.remove('hidden');
+    }
+
+    // 結果をカスタムセクションにも表示
+    let resultSection = document.getElementById('analysisResult');
+    if (!resultSection) {
+      resultSection = document.createElement('div');
+      resultSection.id = 'analysisResult';
+      if (resultsSection) {
+        resultsSection.appendChild(resultSection);
+      } else {
+        document.querySelector('.max-w-7xl').appendChild(resultSection);
+      }
+    }
 
     const resultHTML = `
       <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-blue/20 p-6 mt-8 animate-fade-in">
