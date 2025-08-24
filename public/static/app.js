@@ -705,22 +705,34 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // ログインフォーム
+  // ログインフォーム - Firebase認証を使用
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(loginForm);
-      await Auth.login(formData.get('username'), formData.get('password'));
+      
+      // Firebase認証モジュールをインポート
+      try {
+        const { login } = await import('/static/js/auth.js');
+        await login(formData.get('email'), formData.get('password'));
+      } catch (error) {
+        console.error('Login failed:', error);
+        Utils.showToast('ログインに失敗しました: ' + error.message, 'error');
+      }
     });
   }
   
-  // デモログインボタン
+  // デモログインボタン - 修正版
   const demoLoginButton = document.getElementById('demoLoginButton');
   if (demoLoginButton) {
     demoLoginButton.addEventListener('click', () => {
-      document.getElementById('username').value = 'demo';
-      document.getElementById('password').value = 'demo123';
+      const emailField = document.getElementById('email');
+      const passwordField = document.getElementById('password');
+      if (emailField && passwordField) {
+        emailField.value = 'demo@banasuko.com';
+        passwordField.value = 'demo123';
+      }
     });
   }
   
@@ -741,17 +753,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // 登録フォーム送信
+  // 登録フォーム送信 - Firebase認証を使用
   const registerFormElement = document.getElementById('registerFormElement');
   if (registerFormElement) {
     registerFormElement.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(registerFormElement);
-      await Auth.register(
-        formData.get('username'),
-        formData.get('email'),
-        formData.get('password')
-      );
+      
+      try {
+        const { register } = await import('/static/js/auth.js');
+        await register(
+          formData.get('email'),
+          formData.get('password')
+        );
+      } catch (error) {
+        console.error('Registration failed:', error);
+        Utils.showToast('登録に失敗しました: ' + error.message, 'error');
+      }
     });
   }
   
