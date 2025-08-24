@@ -12,7 +12,7 @@ type Env = {
 }
 
 import { renderer } from './renderer'
-import { SimpleHomePage } from './components/SimpleHomePage'
+import { HomePage } from './components/HomePage'
 import { LoginPage } from './components/LoginPage'
 import { AnalysisPage } from './components/AnalysisPage'
 import { CopyGenerationPage } from './components/CopyGenerationPage'
@@ -475,21 +475,7 @@ app.use(renderer)
 
 // ページルート設定
 app.get('/', (c) => {
-  console.log('🏠 Home page request - SSR rendering SimpleHomePage')
-  try {
-    return c.render(<SimpleHomePage />)
-  } catch (error) {
-    console.error('❌ SimpleHomePage SSR error:', error)
-    return c.html(`
-      <html>
-        <head><title>SSR Error</title></head>
-        <body>
-          <h1>SSR Error</h1>
-          <p>SimpleHomePage rendering failed: ${error}</p>
-        </body>
-      </html>
-    `)
-  }
+  return c.render(<HomePage />)
 })
 
 app.get('/login', (c) => {
