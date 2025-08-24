@@ -105,6 +105,11 @@ class FirebaseAuthManager {
     const protectedRoutes = ['/dashboard', '/analysis', '/copy-generation', '/admin', '/plan']
     if (protectedRoutes.includes(currentPath)) {
       console.log('認証済み - 保護されたルートへのアクセス許可:', currentPath)
+      
+      // ダッシュボードページの場合、専用のJavaScriptを動的に読み込み
+      if (currentPath === '/dashboard') {
+        this.loadDashboardScript()
+      }
       return
     }
     
@@ -113,6 +118,26 @@ class FirebaseAuthManager {
       console.log('認証済み - ホームページ表示')
       return
     }
+  }
+
+  // ダッシュボードスクリプトの動的読み込み
+  loadDashboardScript() {
+    const existingScript = document.getElementById('dashboard-script')
+    if (existingScript) {
+      return // 既に読み込み済み
+    }
+
+    console.log('ダッシュボードスクリプトを動的に読み込み中...')
+    const script = document.createElement('script')
+    script.id = 'dashboard-script'
+    script.src = '/static/js/dashboard.js'
+    script.onload = () => {
+      console.log('ダッシュボードスクリプト読み込み完了')
+    }
+    script.onerror = (error) => {
+      console.error('ダッシュボードスクリプト読み込みエラー:', error)
+    }
+    document.head.appendChild(script)
   }
 
   // 未認証ユーザーのルーティング処理

@@ -276,8 +276,6 @@ export const UserDashboard = () => {
         </div>
       </div>
 
-      {/* Dashboard JavaScript */}
-      <script src="/static/js/dashboard.js"></script>
     </div>
   )
 }
