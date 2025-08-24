@@ -28,11 +28,13 @@ const auth = getAuth(app)
 // グローバル状態
 let currentUser = null
 let isAuthReady = false
+let pendingRedirect = null
 
 // Firebase認証状態管理
 class FirebaseAuthManager {
   constructor() {
     this.initializeAuth()
+    this.setupRouteProtection()
   }
 
   // Firebase初期化
@@ -50,25 +52,139 @@ class FirebaseAuthManager {
             const idToken = await user.getIdToken()
             await this.sendTokenToServer(idToken)
             
-            // ログイン後のリダイレクト
-            if (window.location.pathname === '/login') {
-              window.location.href = '/dashboard'
-            }
+            // 認証完了後のルーティング処理
+            this.handleAuthenticatedRouting()
           } catch (error) {
             console.error('IDトークン処理エラー:', error)
           }
         } else {
           console.log('ユーザーログアウト状態')
           currentUser = null
+          
+          // 未認証時のルーティング処理
+          this.handleUnauthenticatedRouting()
         }
         
         isAuthReady = true
+        this.hideLoadingState()
       })
       
       console.log('Firebase Auth 初期化完了')
     } catch (error) {
       console.error('Firebase Auth 初期化エラー:', error)
       this.showError('認証システムの初期化に失敗しました: ' + error.message)
+      isAuthReady = true
+      this.hideLoadingState()
+    }
+  }
+
+  // ルート保護設定
+  setupRouteProtection() {
+    const currentPath = window.location.pathname
+    const protectedRoutes = ['/dashboard', '/analysis', '/copy-generation', '/admin', '/plan']
+    const publicRoutes = ['/', '/login']
+    
+    // 保護されたルートにアクセス中で認証状態が未確定の場合、ローディング表示
+    if (protectedRoutes.includes(currentPath) && !isAuthReady) {
+      this.showLoadingState()
+    }
+  }
+
+  // 認証済みユーザーのルーティング処理
+  handleAuthenticatedRouting() {
+    const currentPath = window.location.pathname
+    
+    // ログインページにいる場合のみダッシュボードにリダイレクト
+    if (currentPath === '/login') {
+      console.log('認証済みユーザーをダッシュボードにリダイレクト')
+      window.location.href = '/dashboard'
+      return
+    }
+    
+    // 保護されたルートの場合、そのまま表示（リダイレクトしない）
+    const protectedRoutes = ['/dashboard', '/analysis', '/copy-generation', '/admin', '/plan']
+    if (protectedRoutes.includes(currentPath)) {
+      console.log('認証済み - 保護されたルートへのアクセス許可:', currentPath)
+      return
+    }
+    
+    // ホームページにいる場合はそのまま
+    if (currentPath === '/') {
+      console.log('認証済み - ホームページ表示')
+      return
+    }
+  }
+
+  // 未認証ユーザーのルーティング処理
+  handleUnauthenticatedRouting() {
+    const currentPath = window.location.pathname
+    const protectedRoutes = ['/dashboard', '/analysis', '/copy-generation', '/admin', '/plan']
+    
+    // 保護されたルートにアクセスしようとしている場合、ログインページにリダイレクト
+    if (protectedRoutes.includes(currentPath)) {
+      console.log('未認証ユーザーをログインページにリダイレクト')
+      pendingRedirect = currentPath // アクセスしようとしていたページを記憶
+      window.location.href = '/login'
+      return
+    }
+    
+    // 公開ルートの場合はそのまま表示
+    console.log('未認証 - 公開ルートへのアクセス許可:', currentPath)
+  }
+
+  // ローディング状態表示
+  showLoadingState() {
+    const loadingHtml = `
+      <div id="auth-loading" style="
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        background: rgba(10, 10, 31, 0.95); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        z-index: 9999;
+        color: white;
+        font-family: 'Noto Sans JP', sans-serif;
+      ">
+        <div style="text-align: center;">
+          <div style="
+            width: 40px; 
+            height: 40px; 
+            border: 3px solid #00f5ff; 
+            border-top: 3px solid transparent; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+            margin: 0 auto 20px;
+          "></div>
+          <p style="margin: 0; font-size: 16px; color: #00f5ff;">認証状態を確認中...</p>
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `
+    
+    // 既存のローディング要素を削除
+    const existingLoading = document.getElementById('auth-loading')
+    if (existingLoading) {
+      existingLoading.remove()
+    }
+    
+    // 新しいローディング要素を追加
+    document.body.insertAdjacentHTML('beforeend', loadingHtml)
+  }
+
+  // ローディング状態非表示
+  hideLoadingState() {
+    const loadingElement = document.getElementById('auth-loading')
+    if (loadingElement) {
+      loadingElement.remove()
     }
   }
 
