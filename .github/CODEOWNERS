@@ -1,0 +1,33 @@
+# CODEOWNERS - UI凍結 & API差し替え運用
+
+# === UI PROTECTION (Owner approval required) ===
+# 全てのUI関連ファイルはオーナー承認必須
+/deploy/** @rasuta1125
+!/deploy/functions/** 
+
+# Original source (Owner approval required)
+/src/ @rasuta1125
+/public/ @rasuta1125
+vite.config.ts @rasuta1125
+tailwind.config.js @rasuta1125
+postcss.config.js @rasuta1125
+package.json @rasuta1125
+package-lock.json @rasuta1125
+
+# Build and config files (Owner approval required)
+*.config.js @rasuta1125
+*.config.ts @rasuta1125
+tsconfig.json @rasuta1125
+
+# === API FLEXIBILITY (No owner approval needed) ===
+# API functions can be modified without owner approval
+# /deploy/functions/ は除外されているため自由編集可能
+# /functions/ も自由編集可能
+
+# === DEPLOYMENT CONFIG (Owner approval required) ===
+/.github/ @rasuta1125
+/wrangler.toml @rasuta1125
+
+# === ROOT LEVEL PROTECTION ===
+# Prevent accidental changes to critical files
+/.gitignore @rasuta1125
