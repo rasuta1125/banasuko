@@ -1,6 +1,13 @@
 {
   "version": 1,
   "include": [
+    "/",
+    "/login",
+    "/dashboard", 
+    "/analysis",
+    "/copy-generation",
+    "/admin",
+    "/plan",
     "/api/*"
   ],
   "exclude": [
