@@ -1,26 +1,4 @@
 {
   "version": 1,
-  "include": [
-    "/api/*"
-  ],
-  "exclude": [
-    "/",
-    "/login*",
-    "/dashboard*",
-    "/static/*",
-    "/js/*",
-    "/css/*",
-    "/images/*",
-    "/*.ico",
-    "/*.png",
-    "/*.svg",
-    "/*.jpg",
-    "/*.jpeg",
-    "/*.gif",
-    "/*.webp",
-    "/*.woff*",
-    "/*.ttf",
-    "/*.eot",
-    "/*.html"
-  ]
+  "include": ["/api/*"]
 }
