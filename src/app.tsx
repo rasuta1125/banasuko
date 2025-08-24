@@ -92,8 +92,154 @@ app.post('/api/session', async (c) => {
   }
 });
 
-// CORS OPTIONS handler
+// CORS OPTIONS handlers
 app.options('/api/session', (c) => {
+  return c.body(null, 204);
+});
+
+app.options('/api/auth/user', (c) => {
+  return c.body(null, 204);
+});
+
+app.options('/api/user/profile', (c) => {
+  return c.body(null, 204);
+});
+
+app.options('/api/usage/dashboard', (c) => {
+  return c.body(null, 204);
+});
+
+// セッションからユーザー情報を取得するヘルパー関数
+const getUserFromSession = (c: any) => {
+  const sessionCookie = c.req.header('Cookie')?.split(';')
+    .find(cookie => cookie.trim().startsWith('bn_session='))
+  
+  if (!sessionCookie) {
+    return null
+  }
+  
+  const sessionValue = sessionCookie.split('=')[1]
+  if (sessionValue?.startsWith('uid:')) {
+    return {
+      uid: sessionValue.replace('uid:', ''),
+      authenticated: true
+    }
+  }
+  
+  return null
+}
+
+// ユーザー認証状態確認エンドポイント
+app.get('/api/auth/user', async (c) => {
+  try {
+    const user = getUserFromSession(c)
+    
+    if (!user) {
+      return c.json({ success: false, message: 'Not authenticated' }, 401)
+    }
+
+    // 実際のユーザー情報を返す（デモデータではなく）
+    // TODO: Firestoreからユーザー情報を取得
+    return c.json({
+      success: true,
+      user: {
+        uid: user.uid,
+        email: `user-${user.uid.substring(0, 8)}@example.com`, // 一時的な表示
+        plan: 'free',
+        authenticated: true
+      }
+    })
+  } catch (error) {
+    console.error('ユーザー認証確認エラー:', error)
+    return c.json({ success: false, message: 'Authentication check failed' }, 500)
+  }
+})
+
+// ユーザープロファイル作成・取得エンドポイント
+app.post('/api/user/profile', async (c) => {
+  try {
+    const user = getUserFromSession(c)
+    
+    if (!user) {
+      return c.json({ success: false, message: 'Not authenticated' }, 401)
+    }
+
+    const body = await c.req.json()
+    
+    // TODO: Firestoreにユーザープロファイルを作成
+    console.log('ユーザープロファイル作成:', { uid: user.uid, ...body })
+    
+    return c.json({
+      success: true,
+      message: 'Profile created successfully',
+      user: {
+        uid: user.uid,
+        email: body.email,
+        plan: 'free',
+        createdAt: new Date().toISOString()
+      }
+    })
+  } catch (error) {
+    console.error('プロファイル作成エラー:', error)
+    return c.json({ success: false, message: 'Profile creation failed' }, 500)
+  }
+})
+
+// 使用状況ダッシュボードデータ取得
+app.get('/api/usage/dashboard', async (c) => {
+  try {
+    const user = getUserFromSession(c)
+    
+    if (!user) {
+      return c.json({ success: false, message: 'Not authenticated' }, 401)
+    }
+
+    // TODO: Firestoreから実際の使用状況を取得
+    const dashboardData = {
+      user: {
+        uid: user.uid,
+        email: `user-${user.uid.substring(0, 8)}@example.com`,
+        plan: 'free',
+        planName: 'フリープラン'
+      },
+      usage: {
+        singleAnalysis: { used: 0, limit: 10 },
+        abComparison: { used: 0, limit: 5 },
+        copyGeneration: { used: 0, limit: 3 }
+      },
+      daysUntilReset: 30
+    }
+
+    return c.json({
+      success: true,
+      data: dashboardData
+    })
+  } catch (error) {
+    console.error('ダッシュボードデータ取得エラー:', error)
+    return c.json({ success: false, message: 'Dashboard data fetch failed' }, 500)
+  }
+})
+
+// ログアウトエンドポイント
+app.post('/api/auth/logout', async (c) => {
+  console.log('🚪 ログアウトエンドポイント呼び出し')
+  try {
+    // セッションクッキーを削除
+    c.header('Set-Cookie', 'bn_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')
+    
+    console.log('✅ ログアウト成功 - セッションクッキー削除完了')
+    return c.json({
+      success: true,
+      message: 'Logged out successfully'
+    })
+  } catch (error) {
+    console.error('❌ ログアウトエラー:', error)
+    return c.json({ success: false, message: 'Logout failed' }, 500)
+  }
+})
+
+// CORS OPTIONS handler for logout
+app.options('/api/auth/logout', (c) => {
   return c.body(null, 204);
 });
 

@@ -153,59 +153,90 @@ class UserDashboard {
 
   // ユーザー情報更新
   updateUserInfo(user) {
-    // ユーザー名
+    console.log('ユーザー情報を更新中:', user);
+    
+    // ユーザー名（メールアドレスから生成または実名）
+    const displayName = user.displayName || user.name || user.email?.split('@')[0] || 'ユーザー';
     document.querySelectorAll('.user-name').forEach(el => {
-      el.textContent = user.displayName || user.username;
+      el.textContent = displayName;
     });
 
-    // メールアドレス  
+    // メールアドレス（実際のメールアドレスを表示）
     document.querySelectorAll('.user-email').forEach(el => {
-      el.textContent = user.email;
+      el.textContent = user.email || 'メールアドレス不明';
     });
 
     // プラン名
     document.querySelectorAll('.user-plan').forEach(el => {
-      el.textContent = this.getPlanDisplayName(user.plan);
+      el.textContent = this.getPlanDisplayName(user.plan || 'free');
     });
 
     // プランに応じたUIの調整
-    this.updatePlanUI(user.plan);
+    this.updatePlanUI(user.plan || 'free');
   }
 
   // 使用状況表示更新
-  updateUsageDisplay(stats) {
-    const actionTypes = ['single_analysis', 'ab_comparison', 'copy_generation'];
+  updateUsageDisplay(data) {
+    console.log('使用状況を更新中:', data);
     
-    actionTypes.forEach(actionType => {
-      const current = stats.currentUsage[actionType] || 0;
-      const limit = stats.limits[actionType];
-      const percentage = stats.usagePercentage[actionType] || 0;
+    // ユーザー情報の更新
+    if (data.user) {
+      this.updateUserInfo(data.user);
+    }
 
-      // 使用量表示
-      const usageEl = document.querySelector(`.usage-${actionType.replace('_', '-')}`);
-      if (usageEl) {
-        const limitText = limit === -1 ? '無制限' : limit.toString();
-        usageEl.textContent = `${current}/${limitText}`;
-      }
+    // 使用状況の更新
+    if (data.usage) {
+      const usageMapping = {
+        'singleAnalysis': 'single-analysis',
+        'abComparison': 'ab-comparison', 
+        'copyGeneration': 'copy-generation'
+      };
 
-      // プログレスバー
-      const progressEl = document.getElementById(`${this.camelCase(actionType)}Progress`);
-      if (progressEl) {
-        progressEl.style.width = `${Math.min(percentage, 100)}%`;
+      Object.keys(usageMapping).forEach(apiKey => {
+        const usageData = data.usage[apiKey];
+        const displayKey = usageMapping[apiKey];
         
-        // 色変更（使用率に応じて）
-        if (percentage >= 90) {
-          progressEl.className = progressEl.className.replace(/bg-\w+-\w+/, 'bg-red-500');
-        } else if (percentage >= 70) {
-          progressEl.className = progressEl.className.replace(/bg-\w+-\w+/, 'bg-yellow-500');
-        }
-      }
+        if (usageData) {
+          const current = usageData.used || 0;
+          const limit = usageData.limit || 0;
+          const percentage = limit > 0 ? (current / limit) * 100 : 0;
 
-      // パーセンテージ表示
-      const percentageEl = document.getElementById(`${this.camelCase(actionType)}Percentage`);
-      if (percentageEl) {
-        percentageEl.textContent = limit === -1 ? '無制限' : `${percentage}%`;
+          // 使用量表示
+          const usageEl = document.querySelector(`.usage-${displayKey}`);
+          if (usageEl) {
+            const limitText = limit === -1 ? '無制限' : limit.toString();
+            usageEl.textContent = `${current}/${limitText}`;
+          }
+
+          // プログレスバー更新
+          const progressElId = this.camelCase(apiKey) + 'Progress';
+          const progressEl = document.getElementById(progressElId);
+          if (progressEl) {
+            progressEl.style.width = `${Math.min(percentage, 100)}%`;
+            
+              progressEl.className = progressEl.className.replace(/bg-\w+-\w+/, 'bg-red-500');
+            } else if (percentage >= 70) {
+              progressEl.className = progressEl.className.replace(/bg-\w+-\w+/, 'bg-yellow-500');
+            }
+          }
+
+          // パーセンテージ表示
+          const percentageElId = this.camelCase(apiKey) + 'Percentage';
+          const percentageEl = document.getElementById(percentageElId);
+          if (percentageEl) {
+            percentageEl.textContent = limit === -1 ? '無制限' : `${Math.round(percentage)}%`;
+          }
+        }
+      });
+    }
+
+    // リセットまでの日数表示
+    if (data.daysUntilReset !== undefined) {
+      const daysEl = document.getElementById('daysUntilReset');
+      if (daysEl) {
+        daysEl.textContent = data.daysUntilReset;
       }
+    }
     });
 
     // リセットまでの日数

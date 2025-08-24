@@ -94,13 +94,6 @@ class FirebaseAuthManager {
   handleAuthenticatedRouting() {
     const currentPath = window.location.pathname
     
-    // ログインページにいる場合のみダッシュボードにリダイレクト
-    if (currentPath === '/login') {
-      console.log('認証済みユーザーをダッシュボードにリダイレクト')
-      window.location.href = '/dashboard'
-      return
-    }
-    
     // 保護されたルートの場合、そのまま表示（リダイレクトしない）
     const protectedRoutes = ['/dashboard', '/analysis', '/copy-generation', '/admin', '/plan']
     if (protectedRoutes.includes(currentPath)) {
@@ -110,6 +103,17 @@ class FirebaseAuthManager {
       if (currentPath === '/dashboard') {
         this.loadDashboardScript()
       }
+      return
+    }
+    
+    // ログインページにいる場合のみダッシュボードにリダイレクト（一度だけ）
+    if (currentPath === '/login' && !sessionStorage.getItem('redirecting')) {
+      console.log('認証済みユーザーをダッシュボードにリダイレクト')
+      sessionStorage.setItem('redirecting', 'true')
+      setTimeout(() => {
+        sessionStorage.removeItem('redirecting')
+        window.location.href = '/dashboard'
+      }, 100)
       return
     }
     
@@ -138,6 +142,38 @@ class FirebaseAuthManager {
       console.error('ダッシュボードスクリプト読み込みエラー:', error)
     }
     document.head.appendChild(script)
+  }
+
+  // ユーザープロファイル作成/更新
+  async createUserProfile(user) {
+    try {
+      console.log('ユーザープロファイルを作成中...', user.email)
+      
+      const response = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || user.email?.split('@')[0] || 'ユーザー',
+          plan: 'free',
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString()
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('プロファイル作成エラー: ' + response.status)
+      }
+
+      const result = await response.json()
+      console.log('プロファイル作成成功:', result)
+      return result
+    } catch (error) {
+      console.error('プロファイル作成エラー:', error)
+      // プロファイル作成が失敗してもログインは継続
+    }
   }
 
   // 未認証ユーザーのルーティング処理
@@ -251,6 +287,9 @@ class FirebaseAuthManager {
       const idToken = await user.getIdToken()
       await this.sendTokenToServer(idToken)
       
+      // ユーザープロファイルをFirestoreに作成/更新
+      await this.createUserProfile(user)
+      
       this.showSuccess('ログインに成功しました！')
       
       // 少し待ってからリダイレクト
@@ -303,28 +342,8 @@ class FirebaseAuthManager {
       // サーバーセッション作成
       await this.sendTokenToServer(idToken)
       
-      // ユーザープロファイル作成
-      try {
-        const profileResponse = await fetch('/api/user/profile', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + idToken
-          },
-          body: JSON.stringify({
-            displayName: email.split('@')[0],
-            email: email
-          }),
-        })
-        
-        if (profileResponse.ok) {
-          console.log('ユーザープロファイル作成成功')
-        } else {
-          console.warn('プロファイル作成に失敗（非クリティカル）')
-        }
-      } catch (profileError) {
-        console.warn('プロファイル作成エラー（非クリティカル）:', profileError)
-      }
+      // ユーザープロファイルをFirestoreに作成
+      await this.createUserProfile(user)
       
       this.showRegisterSuccess('アカウントが作成されました！')
       
