@@ -202,8 +202,8 @@ export const AnalysisPage = () => {
             </div>
             
             <div id="imagePreview" class="hidden mt-6">
-              <img id="previewImage" class="max-w-full h-auto rounded-lg border border-gray-600" />
-              <p id="imageName" class="text-sm text-gray-400 mt-2"></p>
+              <img id="previewImage" class="max-w-xs h-auto max-h-64 rounded-lg border border-gray-600 mx-auto block" />
+              <p id="imageName" class="text-sm text-gray-400 mt-2 text-center"></p>
             </div>
           </div>
         </div>
@@ -235,7 +235,7 @@ export const AnalysisPage = () => {
                 </div>
               </div>
               <div id="imagePreviewA" class="hidden mt-4">
-                <img id="previewImageA" class="w-full h-auto rounded-lg border border-gray-600" />
+                <img id="previewImageA" class="max-w-full h-auto max-h-48 rounded-lg border border-gray-600 mx-auto block" />
               </div>
             </div>
             
@@ -263,7 +263,7 @@ export const AnalysisPage = () => {
                 </div>
               </div>
               <div id="imagePreviewB" class="hidden mt-4">
-                <img id="previewImageB" class="w-full h-auto rounded-lg border border-gray-600" />
+                <img id="previewImageB" class="max-w-full h-auto max-h-48 rounded-lg border border-gray-600 mx-auto block" />
               </div>
             </div>
           </div>
