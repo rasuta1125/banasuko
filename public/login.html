@@ -105,6 +105,7 @@
 
                 <div class="signup-link">
                     <p>アカウントをお持ちでない方は <a href="#" id="signupLink">新規登録</a></p>
+                    <p><strong>テスト用:</strong> <button class="btn btn-info" id="createDemoBtn" style="margin-top: 10px;">デモアカウント作成</button></p>
                 </div>
             </div>
 
@@ -140,8 +141,35 @@
             // Handle signup link
             document.getElementById('signupLink').addEventListener('click', function(e) {
                 e.preventDefault();
-                // For now, show message that signup will be implemented
-                showMessage('新規登録機能は準備中です。しばらくお待ちください。', 'info');
+                alert('新規登録: 任意のメールアドレスとパスワード（6文字以上）でアカウントを作成できます。\n\n手順:\n1. メールアドレス入力\n2. パスワード入力（6文字以上）\n3. ログインボタンをクリック\n4. エラーが出たら、下の「デモアカウント作成」ボタンをクリック');
+            });
+            
+            // Handle demo account creation
+            document.getElementById('createDemoBtn').addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    const { register } = await import('/static/js/auth.js');
+                    
+                    // デモアカウントを作成
+                    await register('demo@banasuko.com', 'demo123456');
+                    alert('デモアカウントが作成されました！\nメール: demo@banasuko.com\nパスワード: demo123456');
+                    
+                    // フォームにデモ情報を設定
+                    document.getElementById('email').value = 'demo@banasuko.com';
+                    document.getElementById('password').value = 'demo123456';
+                    
+                } catch (error) {
+                    if (error.code === 'auth/email-already-in-use') {
+                        alert('デモアカウントは既に存在します！\nメール: demo@banasuko.com\nパスワード: demo123456\n\n上記でログインしてください。');
+                        
+                        // フォームにデモ情報を設定
+                        document.getElementById('email').value = 'demo@banasuko.com';
+                        document.getElementById('password').value = 'demo123456';
+                    } else {
+                        alert('エラー: ' + error.message);
+                    }
+                }
             });
         });
     </script>

@@ -56,6 +56,7 @@ export async function register(email, password) {
   const { user } = await createUserWithEmailAndPassword(auth, email.trim(), password);
   const idToken = await user.getIdToken();
 
+  // セッション作成
   const res = await fetch('/api/session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -66,6 +67,23 @@ export async function register(email, password) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.ok) {
     throw new Error(data?.message || `session failed (${res.status})`);
+  }
+
+  // ユーザープロフィール作成（新規登録時のみ）
+  try {
+    await fetch('/api/user/profile', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify({
+        displayName: email.split('@')[0], // メールアドレスの@より前を表示名として使用
+        email: email
+      }),
+    });
+  } catch (profileError) {
+    console.warn('Profile creation failed (non-critical):', profileError);
   }
   
   console.log('Register successful:', data);
