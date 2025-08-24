@@ -28,35 +28,20 @@ app.use('/api/*', cors())
 // 静的ファイル配信
 app.use('/static/*', serveStatic({ root: './public' }))
 
-// レンダラー設定
-app.use(renderer)
+// Firebase認証統合
+import { 
+  authMiddleware, 
+  requireAuth, 
+  handleDemoLogin, 
+  handleFirebaseLogin, 
+  handleFirebaseRegister, 
+  handleLogout 
+} from './lib/authMiddleware'
+import { UserService } from './services/userService'
+import { UsageLimitService } from './services/usageLimitService'
+import { User } from './lib/firebase'
 
-// ルート設定
-app.get('/', (c) => {
-  return c.render(<HomePage />)
-})
-
-app.get('/login', (c) => {
-  return c.render(<LoginPage />)
-})
-
-app.get('/analysis', (c) => {
-  return c.render(<AnalysisPage />)
-})
-
-app.get('/copy-generation', (c) => {
-  return c.render(<CopyGenerationPage />)
-})
-
-app.get('/dashboard', (c) => {
-  return c.render(<UserDashboard />)
-})
-
-app.get('/plans', (c) => {
-  return c.render(<PlanManagement />)
-})
-
-// API エンドポイント
+// API エンドポイント（認証ミドルウェア適用前に定義）
 app.get('/api/status', async (c) => {
   const k = c.env.OPENAI_API_KEY
   const ping = c.env.PING
@@ -75,22 +60,6 @@ app.get('/api/status', async (c) => {
     }
   })
 })
-
-// Firebase認証統合
-import { 
-  authMiddleware, 
-  requireAuth, 
-  handleDemoLogin, 
-  handleFirebaseLogin, 
-  handleFirebaseRegister, 
-  handleLogout 
-} from './lib/authMiddleware'
-import { UserService } from './services/userService'
-import { UsageLimitService } from './services/usageLimitService'
-import { User } from './lib/firebase'
-
-// 認証ミドルウェア適用
-app.use('*', authMiddleware)
 
 // Firebase セッション作成エンドポイント
 import { jwtVerify, createRemoteJWKSet } from 'jose'
@@ -480,6 +449,22 @@ import {
   compareImages as compareImagesWithOpenAI, 
   generateCopies as generateCopiesWithOpenAI 
 } from './services/openai'
+
+// 認証が不要なページレンダリング設定
+app.use(renderer)
+
+// 認証が不要なページルート
+app.get('/', (c) => c.render(<HomePage />))
+app.get('/login', (c) => c.render(<LoginPage />))
+
+// 認証ミドルウェア適用（APIと認証不要ページの後に）
+app.use('*', authMiddleware)
+
+// 認証が必要なページルート
+app.get('/analysis', (c) => c.render(<AnalysisPage />))
+app.get('/copy-generation', (c) => c.render(<CopyGenerationPage />))
+app.get('/dashboard', (c) => c.render(<UserDashboard />))
+app.get('/plans', (c) => c.render(<PlanManagement />))
 
 // OpenAI分析関数（Cloudflare Pages対応）
 async function compareImages(base64ImageA: string, base64ImageB: string): Promise<any> {
