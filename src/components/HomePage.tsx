@@ -1,80 +1,8 @@
 export const HomePage = () => {
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a0f1c 0%, #1a1a2e 100%)',
-      color: 'white',
-      padding: '2rem',
-      textAlign: 'center'
-    }}>
-      <h1 style={{
-        fontSize: '3rem',
-        fontWeight: 'bold',
-        marginBottom: '2rem',
-        background: 'linear-gradient(45deg, #00f5ff, #8b5cf6, #ff6b9d)',
-        backgroundClip: 'text',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent'
-      }}>
-        🎯 バナスコAI
-      </h1>
-      <p style={{
-        fontSize: '1.5rem',
-        marginBottom: '3rem',
-        color: '#a0a0a0'
-      }}>
-        AI-Powered Banner Analysis
-        <br />
-        最先端AI技術でバナー広告を詳細分析・最適化
-      </p>
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        justifyContent: 'center',
-        flexWrap: 'wrap'
-      }}>
-        <a href="/analysis" style={{
-          padding: '1rem 2rem',
-          background: 'linear-gradient(45deg, #00f5ff, #8b5cf6)',
-          color: 'white',
-          textDecoration: 'none',
-          borderRadius: '50px',
-          fontWeight: 'bold',
-          transition: 'transform 0.3s ease'
-        }}>
-          🚀 AI診断を開始
-        </a>
-        <a href="/login" style={{
-          padding: '1rem 2rem',
-          background: 'transparent',
-          color: '#00f5ff',
-          textDecoration: 'none',
-          border: '2px solid #00f5ff',
-          borderRadius: '50px',
-          fontWeight: 'bold',
-          transition: 'all 0.3s ease'
-        }}>
-          👤 デモログイン
-        </a>
-      </div>
-      <div style={{
-        marginTop: '3rem',
-        padding: '1.5rem',
-        background: 'rgba(0, 245, 255, 0.1)',
-        borderRadius: '15px',
-        border: '1px solid rgba(0, 245, 255, 0.3)',
-        display: 'inline-block'
-      }}>
-        <p>🎮 <strong>デモアカウント</strong></p>
-        <p style={{ fontFamily: 'monospace', color: '#00f5ff' }}>
-          demo@banasuko.com / demo123456
-        </p>
-        <p style={{ fontSize: '0.9rem', color: '#a0a0a0' }}>
-          登録不要で即座に体験可能！
-        </p>
-      </div>
+    <div class="min-h-screen">
       {/* Hero Section */}
-      <section style={{ display: 'none' }} class="relative pt-20 pb-32 overflow-hidden">
+      <section class="relative pt-20 pb-32 overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center animate-slide-up">
             {/* Main Title */}
