@@ -26,6 +26,9 @@ class UserDashboard {
       // データ読み込み
       await this.loadDashboardData();
       
+      // モバイル用UI調整
+      this.adjustMobileUI();
+      
       console.log('ダッシュボード初期化完了');
     } catch (error) {
       console.error('ダッシュボード初期化エラー:', error);
@@ -548,7 +551,10 @@ class UserDashboard {
 
   // モバイル判定
   isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // より確実なモバイル判定
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+           (window.innerWidth <= 768) ||
+           (typeof window.orientation !== 'undefined');
   }
 
   // アップロードモーダル表示
@@ -768,6 +774,26 @@ class UserDashboard {
     } catch (error) {
       console.error('カメラアクセスエラー:', error);
       this.showError('カメラにアクセスできませんでした');
+    }
+  }
+
+  // モバイルUI調整
+  adjustMobileUI() {
+    if (this.isMobile()) {
+      // カメラカードを確実に非表示
+      const cameraCard = document.getElementById('cameraCard');
+      if (cameraCard) {
+        cameraCard.style.display = 'none';
+      }
+
+      // グリッドレイアウトを2列に調整
+      const actionCards = document.querySelector('.action-cards');
+      if (actionCards) {
+        actionCards.classList.add('grid-cols-1', 'sm:grid-cols-2');
+        actionCards.classList.remove('grid-cols-3');
+      }
+
+      console.log('📱 モバイルUI調整完了');
     }
   }
 }

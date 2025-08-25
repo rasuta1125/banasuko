@@ -12,15 +12,17 @@
     <!-- Header -->
     <header class="header">
         <div class="container">
-            <div class="logo">
-                <a href="/">
-                    <h1>🎯 バナスコAI</h1>
-                </a>
+            <div class="flex justify-between items-center">
+                <div class="logo">
+                    <a href="/">
+                        <h1 class="text-xl md:text-2xl">🎯 バナスコAI</h1>
+                    </a>
+                </div>
+                <nav class="nav flex items-center space-x-2">
+                    <span class="user-info hidden md:block" id="userInfo"></span>
+                    <button id="logoutBtn" class="btn btn-secondary text-sm px-3 py-1 md:px-4 md:py-2">ログアウト</button>
+                </nav>
             </div>
-            <nav class="nav">
-                <span class="user-info" id="userInfo"></span>
-                <button id="logoutBtn" class="btn btn-secondary">ログアウト</button>
-            </nav>
         </div>
     </header>
 
@@ -45,12 +47,12 @@
                         <p>バナー画像をアップロードして分析開始</p>
                         <button class="btn btn-primary">アップロード</button>
                     </div>
-                    <div class="action-card" id="cameraCard">
+                    <div class="action-card hidden md:block" id="cameraCard">
                         <div class="action-icon">
                             <i class="fas fa-camera"></i>
                         </div>
                         <h3>カメラで撮影</h3>
-                        <p>スマートフォンのカメラで直接撮影</p>
+                        <p>デスクトップのカメラで直接撮影</p>
                         <button class="btn btn-secondary">撮影開始</button>
                     </div>
                     <div class="action-card" id="instagramCard">
