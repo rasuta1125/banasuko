@@ -59,6 +59,9 @@ class UserDashboard {
 
   // イベントリスナー設定
   setupEventListeners() {
+    // 画像アップロード関連
+    this.setupImageUploadListeners();
+    
     // プランアップグレードボタン
     document.querySelectorAll('.upgrade-plan-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -95,6 +98,10 @@ class UserDashboard {
     }
 
     // ログアウトボタン
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', this.handleLogout.bind(this));
+    }
     document.querySelectorAll('.logout-btn').forEach(btn => {
       btn.addEventListener('click', this.handleLogout.bind(this));
     });
@@ -459,6 +466,309 @@ class UserDashboard {
         document.body.removeChild(toast);
       }, 300);
     }, 3000);
+  }
+
+  // 画像アップロード機能設定
+  setupImageUploadListeners() {
+    // アップロードカードクリック
+    const uploadImageCard = document.getElementById('uploadImageCard');
+    if (uploadImageCard) {
+      uploadImageCard.addEventListener('click', () => this.showUploadModal());
+    }
+
+    // アップロードモーダル関連
+    const uploadModal = document.getElementById('uploadModal');
+    const closeUploadModal = document.getElementById('closeUploadModal');
+    const imageInput = document.getElementById('imageInput');
+    const selectImageBtn = document.getElementById('selectImageBtn');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const cancelUploadBtn = document.getElementById('cancelUploadBtn');
+
+    if (closeUploadModal) {
+      closeUploadModal.addEventListener('click', () => this.hideUploadModal());
+    }
+
+    if (selectImageBtn) {
+      selectImageBtn.addEventListener('click', () => imageInput?.click());
+    }
+
+    if (imageInput) {
+      imageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          this.handleImageUpload(e.target.files[0]);
+        }
+      });
+    }
+
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener('click', () => this.startAnalysis());
+    }
+
+    if (cancelUploadBtn) {
+      cancelUploadBtn.addEventListener('click', () => this.resetUploadModal());
+    }
+
+    // ドラッグ&ドロップ
+    const uploadArea = document.getElementById('uploadArea');
+    if (uploadArea) {
+      uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('border-cyber-blue');
+      });
+
+      uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('border-cyber-blue');
+      });
+
+      uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('border-cyber-blue');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          this.handleImageUpload(files[0]);
+        }
+      });
+    }
+
+    // カメラ機能 (Mobile Upload Fix - Issue #4)
+    const cameraCard = document.getElementById('cameraCard');
+    if (cameraCard) {
+      // モバイルでカメラ強制起動を防ぐ
+      cameraCard.addEventListener('click', () => {
+        if (this.isMobile()) {
+          // モバイルでもファイル選択ダイアログを表示
+          imageInput?.click();
+        } else {
+          this.showCameraModal();
+        }
+      });
+    }
+  }
+
+  // モバイル判定
+  isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+
+  // アップロードモーダル表示
+  showUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    if (modal) {
+      modal.style.display = 'flex';
+    }
+  }
+
+  // アップロードモーダル非表示
+  hideUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+    this.resetUploadModal();
+  }
+
+  // アップロードモーダルリセット
+  resetUploadModal() {
+    const uploadArea = document.getElementById('uploadArea');
+    const uploadPreview = document.getElementById('uploadPreview');
+    const previewImage = document.getElementById('previewImage');
+    const imageInput = document.getElementById('imageInput');
+
+    if (uploadArea) uploadArea.style.display = 'block';
+    if (uploadPreview) uploadPreview.style.display = 'none';
+    if (previewImage) previewImage.src = '';
+    if (imageInput) imageInput.value = '';
+  }
+
+  // 画像アップロード処理
+  handleImageUpload(file) {
+    // ファイル検証
+    if (!this.validateImageFile(file)) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const uploadArea = document.getElementById('uploadArea');
+      const uploadPreview = document.getElementById('uploadPreview');
+      const previewImage = document.getElementById('previewImage');
+
+      if (uploadArea) uploadArea.style.display = 'none';
+      if (uploadPreview) uploadPreview.style.display = 'block';
+      if (previewImage) previewImage.src = e.target.result;
+
+      // 画像データを保存
+      this.currentImageData = e.target.result;
+      
+      console.log('画像アップロード完了:', file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // 画像ファイル検証
+  validateImageFile(file) {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+      this.showError('PNG, JPG, JPEG, WEBP形式のファイルをアップロードしてください');
+      return false;
+    }
+
+    if (file.size > maxSize) {
+      this.showError('ファイルサイズは10MB以下にしてください');
+      return false;
+    }
+
+    return true;
+  }
+
+  // 分析開始
+  async startAnalysis() {
+    if (!this.currentImageData) {
+      this.showError('画像をアップロードしてください');
+      return;
+    }
+
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    
+    try {
+      // ボタン無効化
+      if (analyzeBtn) {
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = '分析中...';
+      }
+
+      console.log('🔍 画像分析開始');
+
+      // デフォルトでInstagram投稿として分析
+      const response = await fetch('/api/analysis/single', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          image: this.currentImageData,
+          platform: 'instagram-post',
+          adType: null
+        })
+      });
+
+      const result = await response.json();
+      console.log('API Response:', result);
+
+      if (result.success) {
+        this.displayAnalysisResult(result.result);
+        this.showSuccess('分析が完了しました！');
+        this.hideUploadModal();
+      } else {
+        throw new Error(result.message || '分析に失敗しました');
+      }
+
+    } catch (error) {
+      console.error('分析エラー:', error);
+      this.showError(error.message || '分析中にエラーが発生しました。もう一度試してください。');
+    } finally {
+      // ボタン復元
+      if (analyzeBtn) {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = '分析開始';
+      }
+    }
+  }
+
+  // 分析結果表示
+  displayAnalysisResult(result) {
+    // 最近の分析結果リストを更新
+    const recentAnalysisList = document.getElementById('recentAnalysisList');
+    if (recentAnalysisList) {
+      // 空状態を削除
+      const emptyState = recentAnalysisList.querySelector('.empty-state');
+      if (emptyState) {
+        emptyState.remove();
+      }
+
+      // 新しい結果を追加
+      const resultHTML = `
+        <div class="analysis-item bg-navy-700/30 rounded-lg p-4 mb-4 border border-cyber-blue/20">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="text-white font-semibold">画像分析結果</h3>
+            <span class="text-xs text-gray-400">${new Date().toLocaleString()}</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="text-2xl font-bold ${result.score ? 'text-cyber-blue' : 'text-cyber-green'}">
+              ${result.score ? `${result.score}点` : `${result.grade}評価`}
+            </div>
+            <div class="text-sm text-gray-300">
+              媒体: ${this.getPlatformName(result.platform)}
+            </div>
+          </div>
+          <div class="mt-2 text-sm text-gray-300 line-clamp-2">
+            ${result.analysis.substring(0, 100)}...
+          </div>
+          ${result.improvements && result.improvements.length > 0 ? `
+            <div class="mt-2">
+              <span class="text-xs text-cyber-orange">改善提案: ${result.improvements.length}件</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      
+      recentAnalysisList.insertAdjacentHTML('afterbegin', resultHTML);
+    }
+
+    // 統計情報を更新
+    this.updateAnalysisStats();
+  }
+
+  // 統計情報更新
+  updateAnalysisStats() {
+    const totalAnalyses = document.getElementById('totalAnalyses');
+    const monthlyAnalyses = document.getElementById('monthlyAnalyses');
+    
+    if (totalAnalyses) {
+      const current = parseInt(totalAnalyses.textContent) || 0;
+      totalAnalyses.textContent = current + 1;
+    }
+    
+    if (monthlyAnalyses) {
+      const current = parseInt(monthlyAnalyses.textContent) || 0;
+      monthlyAnalyses.textContent = current + 1;
+    }
+  }
+
+  // プラットフォーム名取得
+  getPlatformName(platform) {
+    const names = {
+      'instagram-post': 'Instagram投稿',
+      'instagram-ad': 'Instagram広告', 
+      'gdn': 'GDN広告',
+      'yahoo': 'Yahoo広告'
+    };
+    return names[platform] || platform;
+  }
+
+  // カメラモーダル表示 (Desktop only)
+  showCameraModal() {
+    const modal = document.getElementById('cameraModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      this.initCamera();
+    }
+  }
+
+  // カメラ初期化
+  async initCamera() {
+    const video = document.getElementById('cameraVideo');
+    if (!video) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    } catch (error) {
+      console.error('カメラアクセスエラー:', error);
+      this.showError('カメラにアクセスできませんでした');
+    }
   }
 }
 
