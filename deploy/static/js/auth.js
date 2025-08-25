@@ -1,4 +1,5 @@
-// Firebase Authentication JavaScript統合
+// 🚫 このファイルはバナスコ安定UIの最終版です。UI改変・テンプレ置換は禁止です
+// Firebase Authentication JavaScript統合 - STABLE VERSION
 // バナスコAI - ログイン・登録機能
 
 // Firebase設定
