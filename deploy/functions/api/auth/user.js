@@ -50,16 +50,52 @@ export async function onRequestGet(context) {
 
     console.log('✅ User authenticated:', user.uid);
 
-    // 実際のユーザー情報を返す（Firestoreから取得する代わりに、セッション情報ベース）
-    return new Response(JSON.stringify({
-      success: true,
-      user: {
+    // ユーザー情報を返す（UIDベースで判定）
+    let userInfo;
+    
+    if (user.uid === 'demo_user_001') {
+      // デモユーザーの場合
+      userInfo = {
         uid: user.uid,
-        email: `user-${user.uid.substring(0, 8)}@verified.com`, // 実際のメールアドレス風に
-        displayName: `User${user.uid.substring(0, 6)}`, // UIDベースの表示名
+        email: 'demo@banasuko.com',
+        username: 'demo',
+        displayName: 'デモユーザー',
+        plan: 'premium',
+        authenticated: true
+      };
+    } else {
+      // 一般ユーザーの場合（UIDから情報を復元）
+      let email, username;
+      
+      if (user.uid.startsWith('user_')) {
+        // Base64でエンコードされたメールアドレスから復元を試行
+        try {
+          const base64Part = user.uid.replace('user_', '');
+          // 実際のメールアドレスは保存されていないため、簡易的な表示用メールアドレスを生成
+          email = `user-${user.uid.substring(5, 13)}@example.com`;
+          username = `user${user.uid.substring(5, 11)}`;
+        } catch (e) {
+          email = `user-${user.uid.substring(0, 8)}@example.com`;
+          username = `user${user.uid.substring(0, 6)}`;
+        }
+      } else {
+        email = `user-${user.uid.substring(0, 8)}@example.com`;
+        username = `user${user.uid.substring(0, 6)}`;
+      }
+      
+      userInfo = {
+        uid: user.uid,
+        email: email,
+        username: username,
+        displayName: username,
         plan: 'free',
         authenticated: true
-      }
+      };
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      user: userInfo
     }), {
       status: 200,
       headers: corsHeaders
