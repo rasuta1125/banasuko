@@ -160,6 +160,9 @@ app.post('*', async (c) => {
     // OpenAI Vision API で比較分析
     const result = await compareImages(openai, base64A, base64B)
 
+    // Firestore にデータを保存 (ユーザー情報が利用可能な場合)
+    // TODO: セッション管理実装後にユーザーIDを取得してFirestore保存を実装
+    
     return c.json({
       success: true,
       data: result

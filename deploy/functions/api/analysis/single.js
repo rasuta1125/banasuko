@@ -1,5 +1,67 @@
 // 単一画像分析API - Cloudflare Pages Functions
 
+// Firebase/Firestore REST API設定
+const FIREBASE_PROJECT_ID = 'banasuko-ai';
+const FIRESTORE_ENDPOINT = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+
+// 分析結果をFirestoreに保存（REST API使用）
+async function saveAnalysisResult(userId, analysisData) {
+  try {
+    const docData = {
+      fields: {
+        userId: { stringValue: userId },
+        type: { stringValue: analysisData.type },
+        platform: { stringValue: analysisData.platform },
+        adType: { stringValue: analysisData.adType || '' },
+        score: analysisData.result.score ? { integerValue: analysisData.result.score.toString() } : { nullValue: null },
+        grade: analysisData.result.grade ? { stringValue: analysisData.result.grade } : { nullValue: null },
+        analysis: { stringValue: analysisData.result.analysis || '' },
+        improvements: {
+          arrayValue: {
+            values: (analysisData.result.improvements || []).map(imp => ({ stringValue: imp }))
+          }
+        },
+        imageHash: { stringValue: analysisData.imageHash },
+        timestamp: { timestampValue: new Date().toISOString() },
+        isDemo: { booleanValue: analysisData.result.isDemo || false }
+      }
+    };
+
+    const response = await fetch(`${FIRESTORE_ENDPOINT}/analysisResults`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(docData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Firestore API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.name.split('/').pop(); // ドキュメントID を返す
+  } catch (error) {
+    console.error('Firestore save error:', error);
+    throw error;
+  }
+}
+
+// 画像ハッシュ生成
+function generateImageHash(imageBase64) {
+  // Base64データから実際の画像データ部分を抽出
+  const imageData = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+  
+  // 簡易ハッシュ生成（暗号化ライブラリが使えない場合の代替）
+  let hash = 0;
+  for (let i = 0; i < imageData.length; i++) {
+    const char = imageData.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 32bit整数に変換
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
 // セッションからユーザー情報を取得
 function getUserFromCookie(request) {
   const cookieHeader = request.headers.get('Cookie');
@@ -160,6 +222,22 @@ export async function onRequestPost(context) {
     const analysisResult = await performVisionAnalysis(image, platform, adType, openaiKey);
     
     console.log('✅ Analysis completed:', analysisResult.score || analysisResult.grade);
+
+    // Firestore にデータを保存
+    try {
+      await saveAnalysisResult(user.uid, {
+        type: 'single_analysis',
+        platform,
+        adType,
+        result: analysisResult,
+        timestamp: new Date(),
+        imageHash: generateImageHash(image)
+      });
+      console.log('💾 Analysis result saved to Firestore');
+    } catch (firestoreError) {
+      console.warn('⚠️ Failed to save to Firestore:', firestoreError.message);
+      // Continue without failing the request
+    }
 
     return new Response(JSON.stringify({
       success: true,
