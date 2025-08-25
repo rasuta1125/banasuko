@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build outputs  
+dist/
+.vite/
+.wrangler/
+
+# Archives
+*.tar.gz
+*.zip
+
+# Large binaries
+*.bin
+workerd
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env*
