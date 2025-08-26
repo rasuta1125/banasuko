@@ -7,6 +7,11 @@ class AnalysisManager {
     this.selectedPlatform = '';
     this.scoringType = 'score'; // 'score' (100点満点) or 'grade' (A/B/C評価)
     
+    // ファイル保存用（FormData送信用）
+    this.selectedFile = null;
+    this.selectedFileA = null;
+    this.selectedFileB = null;
+    
     this.init();
   }
 
@@ -269,6 +274,15 @@ class AnalysisManager {
     }
 
     try {
+      // ファイルオブジェクトを保存（FormData送信用）
+      if (type === 'single') {
+        this.selectedFile = file;
+      } else if (type === 'abA') {
+        this.selectedFileA = file;
+      } else if (type === 'abB') {
+        this.selectedFileB = file;
+      }
+      
       // プレビュー表示
       await this.showImagePreview(file, type);
       
@@ -377,10 +391,9 @@ class AnalysisManager {
 
   // 単一画像分析実行
   async startSingleAnalysis() {
-    const imagePreview = document.getElementById('previewImage');
     const analyzeBtn = document.getElementById('analyzeButton');
     
-    if (!imagePreview || !imagePreview.src || imagePreview.src === '') {
+    if (!this.selectedFile) {
       this.showError('分析する画像をアップロードしてください');
       return;
     }
@@ -399,27 +412,23 @@ class AnalysisManager {
 
       console.log('🔍 単一画像分析開始');
 
-      const adType = this.selectedPlatform === 'instagram-ad' ? 
-        document.getElementById('instagramAdTypeSelect')?.value : null;
-
+      // FormData で送信（Content-Type ヘッダは自動設定）
+      const formData = new FormData();
+      formData.append('image', this.selectedFile);  // フィールド名は "image"
+      
       const response = await fetch('/api/analysis/single', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          image: imagePreview.src,
-          platform: this.selectedPlatform,
-          adType: adType
-        })
+        body: formData  // FormData 使用時はヘッダ指定なし
       });
 
       const result = await response.json();
 
       if (result.success) {
-        this.displaySingleResult(result.result);
+        this.displaySingleResult(result.data);
         this.showSuccess('分析が完了しました！');
       } else {
-        throw new Error(result.message || '分析に失敗しました');
+        throw new Error(result.error || '分析に失敗しました');
       }
 
     } catch (error) {
@@ -431,6 +440,13 @@ class AnalysisManager {
         analyzeBtn.disabled = false;
         analyzeBtn.textContent = 'AI分析開始';
       }
+      
+      // 入力リセット（同じファイルを再選択可能にする）
+      const fileInput = document.getElementById('imageUpload');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      this.selectedFile = null;
     }
   }
 
@@ -526,38 +542,31 @@ class AnalysisManager {
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-navy-700/30 rounded-xl p-4">
-            <h4 class="text-lg font-medium text-cyber-blue mb-2">評価</h4>
+            <h4 class="text-lg font-medium text-cyber-blue mb-2">スコア</h4>
             <div class="text-3xl font-bold text-white">
-              ${result.score ? `${result.score}点` : `${result.grade}評価`}
+              ${result.score}点
             </div>
           </div>
           
           <div class="bg-navy-700/30 rounded-xl p-4">
-            <h4 class="text-lg font-medium text-cyber-green mb-2">媒体</h4>
-            <div class="text-lg text-white">${this.getPlatformName(result.platform)}</div>
+            <h4 class="text-lg font-medium text-cyber-green mb-2">評価</h4>
+            <div class="text-lg text-white">${result.verdict}</div>
           </div>
         </div>
 
         <div class="mt-6">
           <h4 class="text-lg font-medium text-cyber-pink mb-3">詳細分析</h4>
-          <div class="bg-navy-700/30 rounded-xl p-4 text-gray-300 leading-relaxed">
-            ${result.analysis.replace(/\n/g, '<br>')}
-          </div>
-        </div>
-
-        ${result.improvements && result.improvements.length > 0 ? `
-          <div class="mt-6">
-            <h4 class="text-lg font-medium text-cyber-orange mb-3">改善提案</h4>
+          <div class="bg-navy-700/30 rounded-xl p-4">
             <ul class="space-y-2">
-              ${result.improvements.map(improvement => `
-                <li class="flex items-start bg-navy-700/30 rounded-lg p-3">
-                  <i class="fas fa-lightbulb text-cyber-orange mt-1 mr-3"></i>
-                  <span class="text-gray-300">${improvement}</span>
+              ${result.reasons.map(reason => `
+                <li class="flex items-start text-gray-300">
+                  <i class="fas fa-check-circle text-cyber-blue mt-1 mr-3 flex-shrink-0"></i>
+                  <span>${reason}</span>
                 </li>
               `).join('')}
             </ul>
           </div>
-        ` : ''}
+        </div>
       </div>
     `;
 
