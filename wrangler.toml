@@ -1,11 +1,7 @@
 name = "banasuko"
 compatibility_date = "2025-08-26"
 compatibility_flags = ["nodejs_compat"]
-
-# Pages Functions設定
-[build]
-command = "npm run build"
-cwd = "."
+pages_build_output_dir = "."
 
 # Environment Variables
 [vars]
