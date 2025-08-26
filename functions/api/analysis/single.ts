@@ -1,6 +1,5 @@
 // /functions/api/analysis/single.ts
-// Drop-in replacement with dual support: FormData file uploads + JSON base64
-// Enhanced error handling and OpenAI v1 SDK compatibility
+// Robust implementation to handle field name variations and prevent 400->500 error chain
 import OpenAI from "openai";
 
 // Cloudflare Pages Functions Environment interface
@@ -18,329 +17,157 @@ type ScoreResult = {
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const { env, request } = ctx;
 
-  // Enhanced error response helper with detailed logging
-  const fail = (status: number, message: string, extra: any = {}) => {
-    console.error(`[Analysis API Error] Status: ${status}, Message: ${message}`, extra);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: message, 
-        timestamp: new Date().toISOString(),
-        ...extra 
-      }), 
-      {
-        status,
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization"
-        },
-      }
-    );
-  };
-
-  // Handle CORS preflight requests
-  if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      },
+  const fail = (status: number, message: string, extra: any = {}) =>
+    new Response(JSON.stringify({ success: false, error: message, ...extra }), {
+      status,
+      headers: corsHeaders(request),
     });
-  }
 
   try {
-    console.log("[Analysis API] Processing request...");
-
-    // 1) Input processing - supports both FormData and JSON formats
-    let base64Image: string | null = null;
-
+    let base64: string | null = null;
     const contentType = request.headers.get("content-type") || "";
-    console.log(`[Analysis API] Content-Type: ${contentType}`);
 
     if (contentType.includes("multipart/form-data")) {
-      console.log("[Analysis API] Processing FormData upload...");
       const form = await request.formData();
-      const file = form.get("image") as File | null;
+
+      // Handle field name variations (image, file, banner, upload, image[])
+      const candidateKeys = ["image", "file", "banner", "upload", "image[]"];
+      let file: File | null = null;
+      
+      // Try standard field names first
+      for (const key of candidateKeys) {
+        const v = form.get(key);
+        if (v instanceof File && v.size > 0) { 
+          file = v; 
+          break; 
+        }
+      }
+      
+      // If no standard field name found, try any File object
+      if (!file) {
+        for (const [, v] of form.entries()) {
+          if (v instanceof File && v.size > 0) { 
+            file = v; 
+            break; 
+          }
+        }
+      }
       
       if (!file) {
-        return fail(400, "No image file found in FormData. Please send 'image' field.");
+        return fail(400, "画像ファイルが見つかりませんでした（FormDataで image を送ってください）");
       }
 
+      // Validate file type
       if (!file.type.startsWith("image/")) {
-        return fail(400, `Invalid file type: ${file.type}. Only image files are supported.`);
+        return fail(400, `無効なファイル形式: ${file.type}。画像ファイルを送ってください。`);
       }
 
-      console.log(`[Analysis API] File received: ${file.name}, Type: ${file.type}, Size: ${file.size} bytes`);
-      
-      const buffer = await file.arrayBuffer();
-      base64Image = bufferToBase64(buffer, file.type);
+      const buf = await file.arrayBuffer();
+      base64 = toDataUrl(buf, file.type || "image/png");
       
     } else {
       // JSON mode: { imageBase64: "data:image/png;base64,..." } or { image: "..." }
-      console.log("[Analysis API] Processing JSON payload...");
-      const body = await safeJsonParse(request);
-      
-      if (!body) {
-        return fail(400, "Invalid JSON payload. Please send valid JSON with imageBase64 field.");
+      const body = await safeJson(request);
+      base64 = (body?.imageBase64 || body?.image || "") as string;
+      if (!base64) {
+        return fail(400, "imageBase64 が空です（JSONで imageBase64 を送ってください）");
       }
-
-      base64Image = (body?.imageBase64 || body?.image || "") as string;
-      
-      if (!base64Image) {
-        return fail(400, "No image data found. Please send 'imageBase64' field in JSON.");
-      }
-
-      // Add data URL prefix if missing
-      if (!base64Image.startsWith("data:")) {
-        base64Image = `data:image/png;base64,${base64Image}`;
+      if (!base64.startsWith("data:")) {
+        base64 = `data:image/png;base64,${base64}`;
       }
     }
 
-    // Validate base64 image format
-    if (!isValidBase64Image(base64Image)) {
-      return fail(400, "Invalid image format. Please send a valid base64 encoded image.");
-    }
-
-    console.log("[Analysis API] Image processed successfully");
-
-    // 2) OpenAI API Configuration
+    // Validate OpenAI API key
     if (!env.OPENAI_API_KEY) {
-      return fail(500, "OpenAI API key not configured in environment");
+      return fail(500, "OPENAI_API_KEY が未設定です");
     }
 
-    const openai = new OpenAI({ 
-      apiKey: env.OPENAI_API_KEY,
-      timeout: 30000, // 30 second timeout
+    const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+
+    // Simplified but effective prompt for banner analysis
+    const prompt = `バナー広告を総合評価。JSONのみで返答: {"score":0-100,"verdict":"...","reasons":["..."]}`;
+
+    // Use correct chat.completions multimodal format
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        role: "user",
+        content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: base64 } },
+        ],
+      }],
+      temperature: 0.2,
     });
 
-    // Use lightweight but capable model for image analysis
-    const model = "gpt-4o-mini";
-
-    // Enhanced Japanese prompt for banner analysis
-    const analysisPrompt = `あなたはバナー広告の専門評価者です。
-与えられた画像を分析し、以下の観点から総合評価してください：
-- 訴求力（メッセージの明確さ・魅力度）
-- 視認性（色使い・レイアウト・読みやすさ）
-- デザイン品質（バランス・統一感・プロフェッショナル度）
-- 情報設計（重要度の整理・導線の明確さ）
-
-出力は **必ず** 以下のJSON形式のみで返してください：
-{"score": 0-100の整数, "verdict": "一言コメント(30文字以内)", "reasons": ["改善点や良い点を3-5個の箇条書き"]}
-
-例：{"score": 75, "verdict": "訴求力は高いが視認性に改善余地あり", "reasons": ["キャッチコピーが魅力的", "色使いが少し派手すぎる", "フォントサイズをもう少し大きく"]}`;
-
-    console.log("[Analysis API] Calling OpenAI API...");
-
-    // 3) OpenAI API call with robust error handling
-    let apiResponse;
-    try {
-      apiResponse = await openai.chat.completions.create({
-        model: model,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: analysisPrompt },
-              { type: "image_url", image_url: { url: base64Image } }
-            ],
-          },
-        ],
-        max_tokens: 800,
-        temperature: 0.3, // More consistent responses
-      });
-    } catch (openaiError: any) {
-      console.error("[Analysis API] OpenAI API Error:", openaiError);
-      
-      if (openaiError.code === 'rate_limit_exceeded') {
-        return fail(429, "API rate limit exceeded. Please try again later.");
-      } else if (openaiError.code === 'invalid_api_key') {
-        return fail(500, "Invalid OpenAI API key configuration.");
-      } else if (openaiError.code === 'model_not_found') {
-        return fail(500, "Requested AI model not available.");
-      } else {
-        return fail(502, "OpenAI API error occurred", { 
-          error_type: openaiError.type,
-          error_code: openaiError.code,
-          error_message: openaiError.message 
-        });
-      }
-    }
-
-    // 4) Response processing and validation
-    const responseText = apiResponse.choices?.[0]?.message?.content;
+    const text = completion.choices?.[0]?.message?.content ?? "";
+    const json = extractJson(text);
     
-    if (!responseText) {
-      return fail(502, "No response received from OpenAI", { raw_response: apiResponse });
+    if (!json) {
+      return fail(502, "OpenAI応答がJSONではありません", { text });
     }
 
-    console.log("[Analysis API] OpenAI response received:", responseText.substring(0, 200) + "...");
-
-    // 5) JSON extraction with flexible parsing
-    const parsedResult = safeExtractAndValidateJson(responseText);
-    
-    if (!parsedResult.success) {
-      return fail(502, "Failed to parse OpenAI response as valid JSON", { 
-        response_text: responseText,
-        parse_error: parsedResult.error 
-      });
-    }
-
-    const jsonData = parsedResult.data;
-
-    // 6) Result validation and normalization
-    const result: ScoreResult = {
-      score: validateAndClampScore(jsonData.score),
-      verdict: String(jsonData.verdict || "評価コメントなし").substring(0, 100), // Truncate if too long
-      reasons: Array.isArray(jsonData.reasons) 
-        ? jsonData.reasons.map(String).filter(Boolean).slice(0, 10) // Max 10 reasons
-        : ["詳細な評価理由が取得できませんでした"]
+    const result = {
+      score: clampInt(json.score, 0, 100),
+      verdict: String(json.verdict ?? ""),
+      reasons: Array.isArray(json.reasons) ? json.reasons.map(String) : [],
     };
-
-    // Final validation
-    if (isNaN(result.score)) {
-      return fail(502, "Invalid score value received from analysis", { json_data: jsonData });
+    
+    if (Number.isNaN(result.score)) {
+      return fail(502, "score が数値で取得できませんでした", { json });
     }
 
-    console.log("[Analysis API] Analysis completed successfully", result);
-
-    // 7) Success response with proper CORS headers
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        data: result,
-        timestamp: new Date().toISOString(),
-        model_used: model
-      }),
-      { 
-        status: 200, 
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization"
-        }
-      }
-    );
-
-  } catch (error: any) {
-    // 8) Global error handler
-    console.error("[Analysis API] Unexpected error:", error);
-    return fail(500, "Internal server error occurred", {
-      error_message: error?.message,
-      error_stack: error?.stack?.substring(0, 500), // Truncate stack trace
-      timestamp: new Date().toISOString()
+    return new Response(JSON.stringify({ success: true, data: result }), {
+      status: 200,
+      headers: corsHeaders(request),
+    });
+    
+  } catch (e: any) {
+    return new Response(JSON.stringify({ success: false, error: e?.message || "server error" }), {
+      status: 500,
+      headers: corsHeaders(request),
     });
   }
 };
 
-// ---- Enhanced Utility Functions ----
+// Handle CORS preflight requests
+export const onRequestOptions: PagesFunction = async ({ request }) =>
+  new Response(null, { status: 204, headers: corsHeaders(request) });
 
-/**
- * Convert ArrayBuffer to base64 data URL
- */
-function bufferToBase64(buffer: ArrayBuffer, mimeType: string): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+// --- Utility Functions ---
+
+const corsHeaders = (req: Request) => ({
+  "Access-Control-Allow-Origin": req.headers.get("Origin") ?? "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Credentials": "true",
+  "Vary": "Origin",
+  "Content-Type": "application/json",
+});
+
+const safeJson = async (req: Request) => { 
+  try { 
+    return await req.json(); 
+  } catch { 
+    return null; 
+  } 
+};
+
+const toDataUrl = (buf: ArrayBuffer, mime: string) =>
+  `data:${mime};base64,` + btoa(String.fromCharCode(...new Uint8Array(buf)));
+
+const extractJson = (text: string) => {
+  const s = text.indexOf("{"), e = text.lastIndexOf("}");
+  if (s === -1 || e === -1 || e <= s) return null;
+  try { 
+    return JSON.parse(text.slice(s, e + 1)); 
+  } catch { 
+    return null; 
   }
-  const base64 = btoa(binary);
-  return `data:${mimeType};base64,${base64}`;
-}
+};
 
-/**
- * Safely parse JSON from request
- */
-async function safeJsonParse(request: Request): Promise<any | null> {
-  try {
-    const text = await request.text();
-    return JSON.parse(text);
-  } catch (error) {
-    console.error("[Analysis API] JSON parse error:", error);
-    return null;
-  }
-}
-
-/**
- * Validate base64 image format
- */
-function isValidBase64Image(dataUrl: string): boolean {
-  try {
-    // Check if it starts with data:image/
-    if (!dataUrl.startsWith("data:image/")) return false;
-    
-    // Extract base64 part
-    const base64Part = dataUrl.split(",")[1];
-    if (!base64Part) return false;
-    
-    // Basic base64 validation
-    const base64Pattern = /^[A-Za-z0-9+/]*={0,2}$/;
-    return base64Pattern.test(base64Part) && base64Part.length > 100; // Minimum size check
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Extract and validate JSON from OpenAI response with flexible parsing
- */
-function safeExtractAndValidateJson(text: string): { success: boolean; data?: any; error?: string } {
-  try {
-    // Method 1: Try direct JSON parse
-    try {
-      const direct = JSON.parse(text);
-      if (direct && typeof direct === 'object') {
-        return { success: true, data: direct };
-      }
-    } catch {}
-
-    // Method 2: Extract JSON between first { and last }
-    const firstBrace = text.indexOf("{");
-    const lastBrace = text.lastIndexOf("}");
-    
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      const jsonText = text.slice(firstBrace, lastBrace + 1);
-      try {
-        const parsed = JSON.parse(jsonText);
-        if (parsed && typeof parsed === 'object') {
-          return { success: true, data: parsed };
-        }
-      } catch {}
-    }
-
-    // Method 3: Try to extract JSON with regex
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed && typeof parsed === 'object') {
-          return { success: true, data: parsed };
-        }
-      } catch {}
-    }
-
-    return { 
-      success: false, 
-      error: "No valid JSON found in response"
-    };
-    
-  } catch (error) {
-    return { 
-      success: false, 
-      error: `JSON parsing failed: ${error instanceof Error ? error.message : String(error)}`
-    };
-  }
-}
-
-/**
- * Validate and clamp score to 0-100 range
- */
-function validateAndClampScore(score: any): number {
-  const numScore = Number(score);
-  if (isNaN(numScore)) return 0;
-  return Math.max(0, Math.min(100, Math.round(numScore)));
-}
+const clampInt = (n: any, min: number, max: number) => {
+  const v = Math.round(Number(n));
+  if (Number.isNaN(v)) return NaN;
+  return Math.min(max, Math.max(min, v));
+};
