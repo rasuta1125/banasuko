@@ -1,23 +1,12 @@
 name = "banasuko"
 compatibility_date = "2025-08-26"
-pages_build_output_dir = "."
 compatibility_flags = ["nodejs_compat"]
 
-[functions]
-directory = "functions"
+# Pages Functions設定
+[build]
+command = "npm run build"
+cwd = "."
 
-# プロダクション環境用設定
-[env.production]
-compatibility_flags = ["nodejs_compat"]
-
-[[env.production.bindings]]
-name = "OPENAI_API_KEY"
-type = "secret"
-
-# プレビュー環境用設定
-[env.preview]
-compatibility_flags = ["nodejs_compat"]
-
-[[env.preview.bindings]]
-name = "OPENAI_API_KEY"
-type = "secret"
+# Environment Variables
+[vars]
+# Production環境では Cloudflare Pages ダッシュボードで OPENAI_API_KEY を設定
