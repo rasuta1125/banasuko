@@ -1,6 +1,0 @@
-🚀 COMPLETE SITE DEPLOYMENT - Sun Aug 24 03:31:30 UTC 2025
-✅ HTML Pages: index.html, login.html, dashboard.html, 404.html
-✅ Authentication: Firebase + /api/session endpoint
-✅ Build Process: npm run build + public file copying
-✅ Routing: _redirects for SPA navigation
-🌐 Site: https://banasco-ai.pages.dev
