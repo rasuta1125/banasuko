@@ -1,173 +1,158 @@
-// /functions/api/analysis/single.ts
-// Robust implementation to handle field name variations and prevent 400->500 error chain
-import OpenAI from "openai";
+import { Hono } from 'hono'
+import OpenAI from 'openai'
 
-// Cloudflare Pages Functions Environment interface
-interface Env {
-  OPENAI_API_KEY: string;
+type Env = { 
+  OPENAI_API_KEY: string
+  PING: string 
 }
 
-// Score result type definition
-type ScoreResult = {
-  score: number;        // 0-100 integer
-  verdict: string;      // Brief comment
-  reasons: string[];    // Bullet point reasons
-};
+const app = new Hono<{ Bindings: Env }>()
 
-export const onRequestPost: PagesFunction<Env> = async (ctx) => {
-  const { env, request } = ctx;
+// バナー分析用プロンプト
+const ANALYSIS_PROMPT = `
+あなたは広告バナー分析の専門家です。アップロードされたバナー画像を以下の5項目で分析し、JSONフォーマットで結果を返してください。
 
-  const fail = (status: number, message: string, extra: any = {}) =>
-    new Response(JSON.stringify({ success: false, error: message, ...extra }), {
-      status,
-      headers: corsHeaders(request),
-    });
+## 分析項目
+1. **瞬間伝達力 (impact)**: 3秒以内にメッセージが理解できるか (0-100点)
+2. **視認性 (visibility)**: 文字の読みやすさ、色彩バランス (0-100点)  
+3. **行動喚起 (cta)**: CTAの明確さ、効果的な配置 (0-100点)
+4. **整合性 (consistency)**: 画像と文字の一致度、ブランド統一性 (0-100点)
+5. **情報バランス (balance)**: 情報過多の回避、適切な情報量 (0-100点)
 
+## 出力形式 (JSON)
+{
+  "totalScore": 82,
+  "level": "優秀レベル",
+  "scores": {
+    "impact": { "score": 88, "label": "瞬間伝達力", "color": "#90EE90" },
+    "visibility": { "score": 79, "label": "視認性", "color": "#87CEEB" },
+    "cta": { "score": 85, "label": "行動喚起", "color": "#90EE90" },
+    "consistency": { "score": 81, "label": "整合性", "color": "#87CEEB" },
+    "balance": { "score": 76, "label": "情報バランス", "color": "#FFA500" }
+  },
+  "analysis": {
+    "targetMatch": 91,
+    "strengths": [
+      "視覚階層: メインメッセージが3秒以内に理解可能",
+      "色彩バランス: ブランドカラーと可読性の両立が秀逸",
+      "CTA配置: 自然な視線誘導でアクション率向上が期待"
+    ],
+    "improvements": [
+      "テキストコントラスト: 明度を15%向上で可読性UP",
+      "余白調整: 左右マージンを1.2倍に拡張",
+      "フォントサイズ: キャッチコピーを24px→28pxに"
+    ],
+    "performance": {
+      "clickRate": { "current": 3.2, "improved": 4.1, "change": 28 },
+      "conversionRate": { "current": 1.8, "improved": 2.3, "change": 27 },
+      "brandAwareness": { "change": 34 }
+    }
+  }
+}
+
+## スコア基準
+- 90-100点: 優秀レベル (色: #90EE90)
+- 80-89点: 良好レベル (色: #87CEEB)  
+- 70-79点: 標準レベル (色: #FFA500)
+- 60-69点: 改善必要 (色: #FF6B6B)
+- 0-59点: 要改善 (色: #FF4444)
+
+必ず有効なJSONのみを返し、説明文は含めないでください。
+`
+
+// 単一画像分析
+async function analyzeSingleImage(openai: OpenAI, base64Image: string): Promise<any> {
   try {
-    let base64: string | null = null;
-    const contentType = request.headers.get("content-type") || "";
-
-    if (contentType.includes("multipart/form-data")) {
-      const form = await request.formData();
-
-      // Handle field name variations (image, file, banner, upload, image[])
-      const candidateKeys = ["image", "file", "banner", "upload", "image[]"];
-      let file: File | null = null;
-      
-      // Try standard field names first
-      for (const key of candidateKeys) {
-        const v = form.get(key);
-        if (v instanceof File && v.size > 0) { 
-          file = v; 
-          break; 
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: ANALYSIS_PROMPT },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`
+              }
+            }
+          ]
         }
-      }
-      
-      // If no standard field name found, try any File object
-      if (!file) {
-        for (const [, v] of form.entries()) {
-          if (v instanceof File && v.size > 0) { 
-            file = v; 
-            break; 
-          }
+      ],
+      max_tokens: 1500,
+      temperature: 0.1
+    })
+
+    const content = response.choices[0]?.message?.content
+    if (!content) {
+      throw new Error('OpenAI API response is empty')
+    }
+
+    // JSONパースを試行
+    try {
+      return JSON.parse(content)
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError)
+      console.log('Raw response:', content)
+      throw new Error('OpenAI API returned invalid JSON')
+    }
+  } catch (error) {
+    console.error('OpenAI API error:', error)
+    throw error
+  }
+}
+
+app.post('*', async (c) => {
+  try {
+    // 環境変数チェック
+    const apiKey = c.env.OPENAI_API_KEY
+    if (!apiKey) {
+      return c.json({ 
+        success: false, 
+        error: 'OPENAI_API_KEY not configured',
+        debug: {
+          env_keys: Object.keys(c.env || {}),
+          env_count: Object.keys(c.env || {}).length
         }
-      }
-      
-      if (!file) {
-        return fail(400, "画像ファイルが見つかりませんでした（FormDataで image を送ってください）");
-      }
-
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        return fail(400, `無効なファイル形式: ${file.type}。画像ファイルを送ってください。`);
-      }
-
-      const buf = await file.arrayBuffer();
-      base64 = toDataUrl(buf, file.type || "image/png");
-      
-    } else {
-      // JSON mode: { imageBase64: "data:image/png;base64,..." } or { image: "..." }
-      const body = await safeJson(request);
-      base64 = (body?.imageBase64 || body?.image || "") as string;
-      if (!base64) {
-        return fail(400, "imageBase64 が空です（JSONで imageBase64 を送ってください）");
-      }
-      if (!base64.startsWith("data:")) {
-        base64 = `data:image/png;base64,${base64}`;
-      }
+      }, 500)
     }
 
-    // Validate OpenAI API key
-    if (!env.OPENAI_API_KEY) {
-      return fail(500, "OPENAI_API_KEY が未設定です");
+    // OpenAI クライアント初期化
+    const openai = new OpenAI({
+      apiKey: apiKey
+    })
+
+    // フォームデータの解析
+    const formData = await c.req.formData()
+    const imageFile = formData.get('image') as File
+
+    if (!imageFile) {
+      return c.json({ success: false, error: 'No image file provided' }, 400)
     }
 
-    const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+    // 画像をBase64に変換
+    const arrayBuffer = await imageFile.arrayBuffer()
+    const base64 = Buffer.from(arrayBuffer).toString('base64')
 
-    // Simplified but effective prompt for banner analysis
-    const prompt = `バナー広告を総合評価。JSONのみで返答: {"score":0-100,"verdict":"...","reasons":["..."]}`;
+    // OpenAI Vision API で分析
+    const result = await analyzeSingleImage(openai, base64)
 
-    // Use correct chat.completions multimodal format
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: prompt },
-          { type: "image_url", image_url: { url: base64 } },
-        ],
-      }],
-      temperature: 0.2,
-    });
+    return c.json({
+      success: true,
+      data: result
+    })
 
-    const text = completion.choices?.[0]?.message?.content ?? "";
-    const json = extractJson(text);
-    
-    if (!json) {
-      return fail(502, "OpenAI応答がJSONではありません", { text });
-    }
-
-    const result = {
-      score: clampInt(json.score, 0, 100),
-      verdict: String(json.verdict ?? ""),
-      reasons: Array.isArray(json.reasons) ? json.reasons.map(String) : [],
-    };
-    
-    if (Number.isNaN(result.score)) {
-      return fail(502, "score が数値で取得できませんでした", { json });
-    }
-
-    return new Response(JSON.stringify({ success: true, data: result }), {
-      status: 200,
-      headers: corsHeaders(request),
-    });
-    
-  } catch (e: any) {
-    return new Response(JSON.stringify({ success: false, error: e?.message || "server error" }), {
-      status: 500,
-      headers: corsHeaders(request),
-    });
+  } catch (error) {
+    console.error('Single image analysis error:', error)
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      debug: {
+        timestamp: new Date().toISOString(),
+        environment: 'pages-function'
+      }
+    }, 500)
   }
-};
+})
 
-// Handle CORS preflight requests
-export const onRequestOptions: PagesFunction = async ({ request }) =>
-  new Response(null, { status: 204, headers: corsHeaders(request) });
-
-// --- Utility Functions ---
-
-const corsHeaders = (req: Request) => ({
-  "Access-Control-Allow-Origin": req.headers.get("Origin") ?? "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Credentials": "true",
-  "Vary": "Origin",
-  "Content-Type": "application/json",
-});
-
-const safeJson = async (req: Request) => { 
-  try { 
-    return await req.json(); 
-  } catch { 
-    return null; 
-  } 
-};
-
-const toDataUrl = (buf: ArrayBuffer, mime: string) =>
-  `data:${mime};base64,` + btoa(String.fromCharCode(...new Uint8Array(buf)));
-
-const extractJson = (text: string) => {
-  const s = text.indexOf("{"), e = text.lastIndexOf("}");
-  if (s === -1 || e === -1 || e <= s) return null;
-  try { 
-    return JSON.parse(text.slice(s, e + 1)); 
-  } catch { 
-    return null; 
-  }
-};
-
-const clampInt = (n: any, min: number, max: number) => {
-  const v = Math.round(Number(n));
-  if (Number.isNaN(v)) return NaN;
-  return Math.min(max, Math.max(min, v));
-};
+export const onRequest = app.fetch
