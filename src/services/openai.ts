@@ -246,10 +246,46 @@ export async function analyzeSingleImage(base64Image: string, apiKey?: string): 
         }
       ],
       max_tokens: 1500,
+      timeout: 60000, // 60秒タイムアウト追加
       temperature: 0.1
     })
 
-    const content = response.choices[0]?.message?.content
+    // OpenAI APIレスポンスからテキストを安全に取り出す関数
+    const extractTextFromResponse = (resp: any): string => {
+      // Chat Completions API (従来)
+      try {
+        const choices = resp?.choices?.[0]
+        if (choices?.message?.content) {
+          return choices.message.content
+        }
+      } catch (e) {
+        console.warn("Traditional response extraction failed:", e)
+      }
+
+      // Responses API (新) に寄せた返却型のケア
+      try {
+        if (resp?.output_text) {
+          return resp.output_text
+        }
+      } catch (e) {
+        console.warn("Output text extraction failed:", e)
+      }
+
+      // その他の可能性を試行
+      try {
+        if (resp?.output?.[0]?.content?.[0]?.text) {
+          return resp.output[0].content[0].text
+        }
+      } catch (e) {
+        console.warn("Alternative extraction failed:", e)
+      }
+
+      // デバッグ用：生レスポンスをログ出力
+      console.log("Full response structure:", JSON.stringify(resp, null, 2))
+      throw new Error("banaAI API response structure is unrecognized")
+    }
+
+    const content = extractTextFromResponse(response)
     if (!content) {
       throw new Error('banaAI API response is empty')
     }
@@ -299,10 +335,45 @@ export async function compareImages(base64ImageA: string, base64ImageB: string, 
         }
       ],
       max_tokens: 2000,
-      temperature: 0.1
+      timeout: 60000, // 60秒タイムアウト追加
     })
 
-    const content = response.choices[0]?.message?.content
+    // OpenAI APIレスポンスからテキストを安全に取り出す関数
+    const extractTextFromResponse = (resp: any): string => {
+      // Chat Completions API (従来)
+      try {
+        const choices = resp?.choices?.[0]
+        if (choices?.message?.content) {
+          return choices.message.content
+        }
+      } catch (e) {
+        console.warn("Traditional response extraction failed:", e)
+      }
+
+      // Responses API (新) に寄せた返却型のケア
+      try {
+        if (resp?.output_text) {
+          return resp.output_text
+        }
+      } catch (e) {
+        console.warn("Output text extraction failed:", e)
+      }
+
+      // その他の可能性を試行
+      try {
+        if (resp?.output?.[0]?.content?.[0]?.text) {
+          return resp.output[0].content[0].text
+        }
+      } catch (e) {
+        console.warn("Alternative extraction failed:", e)
+      }
+
+      // デバッグ用：生レスポンスをログ出力
+      console.log("Full response structure:", JSON.stringify(resp, null, 2))
+      throw new Error("banaAI API response structure is unrecognized")
+    }
+
+    const content = extractTextFromResponse(response)
     if (!content) {
       throw new Error('banaAI API response is empty')
     }
@@ -341,10 +412,46 @@ export async function generateCopies(base64Image: string, apiKey?: string): Prom
         }
       ],
       max_tokens: 1500,
+      timeout: 60000, // 60秒タイムアウト追加
       temperature: 0.3
     })
 
-    const content = response.choices[0]?.message?.content
+    // OpenAI APIレスポンスからテキストを安全に取り出す関数
+    const extractTextFromResponse = (resp: any): string => {
+      // Chat Completions API (従来)
+      try {
+        const choices = resp?.choices?.[0]
+        if (choices?.message?.content) {
+          return choices.message.content
+        }
+      } catch (e) {
+        console.warn("Traditional response extraction failed:", e)
+      }
+
+      // Responses API (新) に寄せた返却型のケア
+      try {
+        if (resp?.output_text) {
+          return resp.output_text
+        }
+      } catch (e) {
+        console.warn("Output text extraction failed:", e)
+      }
+
+      // その他の可能性を試行
+      try {
+        if (resp?.output?.[0]?.content?.[0]?.text) {
+          return resp.output[0].content[0].text
+        }
+      } catch (e) {
+        console.warn("Alternative extraction failed:", e)
+      }
+
+      // デバッグ用：生レスポンスをログ出力
+      console.log("Full response structure:", JSON.stringify(resp, null, 2))
+      throw new Error("banaAI API response structure is unrecognized")
+    }
+
+    const content = extractTextFromResponse(response)
     if (!content) {
       throw new Error('banaAI API response is empty')
     }
