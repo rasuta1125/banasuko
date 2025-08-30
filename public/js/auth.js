@@ -1,5 +1,5 @@
 // Firebase Authentication JavaScript統合
-// バナスコAI - ログイン・登録機能 (Firebase v9 modular)
+// バナスコAI - ログイン・登録機能
 
 // Firebase設定
 const firebaseConfig = {
@@ -12,65 +12,8 @@ const firebaseConfig = {
   measurementId: "G-09515RW8KC"
 };
 
-// Firebase v9 モジュラー式でインポート
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut 
-} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-
-// Firebase初期化
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
 // グローバル変数
 let currentUser = null;
-let isAuthReady = false;
-
-// 統一されたログイン関数
-export async function login(email, password) {
-  const { user } = await signInWithEmailAndPassword(auth, email.trim(), password);
-  const idToken = await user.getIdToken();
-
-  const res = await fetch('/api/session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ idToken }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data?.ok) {
-    throw new Error(data?.message || `session failed (${res.status})`);
-  }
-  
-  console.log('Login successful:', data);
-  return data;
-}
-
-// 統一された登録関数
-export async function register(email, password) {
-  const { user } = await createUserWithEmailAndPassword(auth, email.trim(), password);
-  const idToken = await user.getIdToken();
-
-  const res = await fetch('/api/session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ idToken }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data?.ok) {
-    throw new Error(data?.message || `session failed (${res.status})`);
-  }
-  
-  console.log('Register successful:', data);
-  return data;
-}
 
 // 認証状態管理
 class AuthManager {
@@ -83,30 +26,7 @@ class AuthManager {
   async initializeAuth() {
     try {
       console.log('Firebase Auth 初期化中...');
-      
-      // 認証状態変更の監視
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          console.log('ユーザーログイン済み:', user.email);
-          currentUser = user;
-          
-          // ダッシュボードにリダイレクト
-          if (window.location.pathname === '/login') {
-            window.location.href = '/dashboard';
-          }
-        } else {
-          console.log('ユーザーログアウト状態');
-          currentUser = null;
-          
-          // ログインページ以外にいる場合はリダイレクト
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-            window.location.href = '/login';
-          }
-        }
-        
-        isAuthReady = true;
-      });
-      
+      await this.checkAuthState();
       console.log('Firebase Auth 初期化完了');
     } catch (error) {
       console.error('Firebase Auth 初期化エラー:', error);
@@ -114,276 +34,302 @@ class AuthManager {
     }
   }
 
+  // 認証状態チェック
+  async checkAuthState() {
+    try {
+      const response = await fetch('/api/auth/user', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          this.onAuthStateChanged(data.user);
+          return;
+        }
+      }
+      this.onAuthStateChanged(null);
+    } catch (error) {
+      console.error('認証状態チェックエラー:', error);
+      this.onAuthStateChanged(null);
+    }
+  }
+
+  // 認証状態変更時の処理
+  onAuthStateChanged(user) {
+    currentUser = user;
+    if (user) {
+      console.log('ユーザーがログインしています:', user.username);
+      if (window.location.pathname === '/login' || window.location.pathname === '/') {
+        window.location.href = '/analysis'; // ログインページにいたらダッシュボード的なページへ
+      }
+      this.updateUserInfo(user);
+    } else {
+      console.log('ユーザーはログインしていません');
+      const protectedPages = ['/analysis', '/copy-generation', '/admin', '/dashboard'];
+      if (protectedPages.includes(window.location.pathname)) {
+        window.location.href = '/login'; // 保護されたページにいたらログインページへ
+      }
+    }
+  }
+
   // イベントリスナー設定
   setupEventListeners() {
-    // ログインフォーム
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
-      loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.handleLogin();
-      });
+      loginForm.addEventListener('submit', this.handleLogin.bind(this));
     }
 
-    // 登録フォーム
-    const registerForm = document.getElementById('registerForm');
+    const registerForm = document.getElementById('registerFormElement');
     if (registerForm) {
-      registerForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.handleRegister();
-      });
+      registerForm.addEventListener('submit', this.handleRegister.bind(this));
     }
 
-    // デモログインボタン
-    const demoLoginBtn = document.getElementById('demoLoginBtn');
+    const demoLoginBtn = document.getElementById('demoLoginButton');
     if (demoLoginBtn) {
-      demoLoginBtn.addEventListener('click', () => {
-        this.handleDemoLogin();
+      demoLoginBtn.addEventListener('click', this.handleDemoLogin.bind(this));
+    }
+
+    // フォーム切り替えロジックはHTML/CSSで制御推奨ですが、現状維持
+    const showRegisterBtn = document.getElementById('showRegisterForm');
+    const showLoginBtn = document.getElementById('showLoginForm');
+    const loginFormDiv = document.querySelector('.bg-navy-800\\/50:first-child');
+    const registerFormDiv = document.getElementById('registerForm');
+
+    if (showRegisterBtn && registerFormDiv) {
+      showRegisterBtn.addEventListener('click', () => {
+        loginFormDiv.style.display = 'none';
+        registerFormDiv.classList.remove('hidden');
       });
     }
 
-    // ログアウトボタン
-    const logoutBtns = document.querySelectorAll('.logout-btn, #logoutBtn');
-    logoutBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.handleLogout();
+    if (showLoginBtn && loginFormDiv) {
+      showLoginBtn.addEventListener('click', () => {
+        registerFormDiv.classList.add('hidden');
+        loginFormDiv.style.display = 'block';
       });
+    }
+    
+    // ログアウトボタン
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('.logout-btn, .logout-btn *')) {
+        e.preventDefault();
+        this.handleLogout();
+      }
     });
   }
 
   // ログイン処理
-  async handleLogin() {
-    const email = document.getElementById('email')?.value.trim();
-    const password = document.getElementById('password')?.value;
+  async handleLogin(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const email = formData.get('email');
+    const password = formData.get('password');
+    const isDemo = email === 'demo@banasuko.com' && password === 'demo123';
+    const loginData = {
+      email: email,
+      password: password,
+      username: isDemo ? 'demo' : email.split('@')[0]
+    };
 
-    if (!email || !password) {
-      this.showError('メールアドレスとパスワードを入力してください');
-      return;
-    }
-
-    const loginBtn = document.querySelector('#loginForm button[type="submit"]');
-    const originalText = loginBtn?.textContent;
-    
+    this.setLoading(true, 'login');
     try {
-      if (loginBtn) {
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'ログイン中...';
-      }
-
-      console.log('Firebase login attempt:', { 
-        email: email, 
-        passwordLength: password.length 
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginData),
+        credentials: 'include'
       });
+      const data = await response.json();
 
-      // 統一されたログイン関数を使用
-      await login(email, password);
-      
-      this.showSuccess('ログインに成功しました');
-      
+      if (data.success) {
+        this.showSuccess('ログインしました！');
+        this.onAuthStateChanged(data.user);
+      } else {
+        this.showError(data.error || 'ログインに失敗しました');
+      }
     } catch (error) {
       console.error('ログインエラー:', error);
-      
-      // Firebase認証エラーの詳細表示
-      let errorMessage = 'ログインに失敗しました';
-      
-      if (error.code) {
-        switch (error.code) {
-          case 'auth/invalid-credential':
-            errorMessage = 'メールアドレスまたはパスワードが正しくありません';
-            break;
-          case 'auth/user-not-found':
-            errorMessage = 'このメールアドレスのユーザーは見つかりませんでした';
-            break;
-          case 'auth/wrong-password':
-            errorMessage = 'パスワードが正しくありません';
-            break;
-          case 'auth/invalid-email':
-            errorMessage = 'メールアドレスの形式が正しくありません';
-            break;
-          case 'auth/user-disabled':
-            errorMessage = 'このアカウントは無効化されています';
-            break;
-          case 'auth/too-many-requests':
-            errorMessage = 'ログイン試行回数が多すぎます。しばらく時間をおいて再試行してください';
-            break;
-        }
-      } else if (error.message?.includes('session failed')) {
-        errorMessage = `セッション作成エラー: ${error.message}`;
-      }
-      
-      this.showError(errorMessage);
-      
+      this.showError('ネットワークエラーが発生しました');
     } finally {
-      if (loginBtn) {
-        loginBtn.disabled = false;
-        loginBtn.textContent = originalText;
-      }
+      this.setLoading(false, 'login');
     }
   }
 
-  // 登録処理
-  async handleRegister() {
-    const email = document.getElementById('registerEmail')?.value.trim();
-    const password = document.getElementById('registerPassword')?.value;
-    const confirmPassword = document.getElementById('confirmPassword')?.value;
+  // ユーザー登録処理
+  async handleRegister(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const registerData = {
+      email: formData.get('email'),
+      password: formData.get('password'),
+      username: formData.get('username'),
+      displayName: formData.get('username')
+    };
 
-    if (!email || !password || !confirmPassword) {
-      this.showError('すべての項目を入力してください');
+    if (!registerData.email || !registerData.password || !registerData.username) {
+      this.showError('すべての項目を入力してください', 'register');
+      return;
+    }
+    if (registerData.password.length < 6) {
+      this.showError('パスワードは6文字以上で入力してください', 'register');
       return;
     }
 
-    if (password !== confirmPassword) {
-      this.showError('パスワードが一致しません');
-      return;
-    }
-
-    if (password.length < 6) {
-      this.showError('パスワードは6文字以上で入力してください');
-      return;
-    }
-
-    const registerBtn = document.querySelector('#registerForm button[type="submit"]');
-    const originalText = registerBtn?.textContent;
-    
+    this.setLoading(true, 'register');
     try {
-      if (registerBtn) {
-        registerBtn.disabled = true;
-        registerBtn.textContent = '登録中...';
-      }
-
-      console.log('Firebase register attempt:', { 
-        email: email, 
-        passwordLength: password.length 
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registerData),
+        credentials: 'include'
       });
+      const data = await response.json();
 
-      // 統一された登録関数を使用
-      await register(email, password);
-      
-      this.showSuccess('アカウント登録に成功しました');
-      
+      if (data.success) {
+        this.showSuccess('アカウントが作成されました！', 'register');
+        
+        // ★★★ 修正点：Firestoreにプロフィールを作成する ★★★
+        try {
+          await fetch('/api/user/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              email: registerData.email,
+              displayName: registerData.displayName,
+              plan: 'free' // デフォルトでフリープランを付与
+            })
+          });
+          console.log('Firestoreにユーザープロフィールを作成しました。');
+        } catch (profileError) {
+          console.error('Firestoreプロファイル作成エラー:', profileError);
+          this.showError('プロフィールの作成に失敗しました。', 'register');
+        }
+
+        // 登録成功後、そのままログイン状態にする
+        this.onAuthStateChanged(data.user);
+
+      } else {
+        this.showError(data.error || 'アカウント作成に失敗しました', 'register');
+      }
     } catch (error) {
       console.error('登録エラー:', error);
-      
-      let errorMessage = 'アカウント登録に失敗しました';
-      
-      if (error.code) {
-        switch (error.code) {
-          case 'auth/email-already-in-use':
-            errorMessage = 'このメールアドレスは既に使用されています';
-            break;
-          case 'auth/invalid-email':
-            errorMessage = 'メールアドレスの形式が正しくありません';
-            break;
-          case 'auth/weak-password':
-            errorMessage = 'パスワードが弱すぎます。より強力なパスワードを設定してください';
-            break;
-        }
-      } else if (error.message?.includes('session failed')) {
-        errorMessage = `セッション作成エラー: ${error.message}`;
-      }
-      
-      this.showError(errorMessage);
-      
+      this.showError('ネットワークエラーが発生しました', 'register');
     } finally {
-      if (registerBtn) {
-        registerBtn.disabled = false;
-        registerBtn.textContent = originalText;
-      }
+      this.setLoading(false, 'register');
     }
   }
 
   // デモログイン処理
-  async handleDemoLogin() {
-    const demoEmail = 'demo@banasuko.com';
-    const demoPassword = 'demo123456';
-    
-    // フォームにデモ情報を設定
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    if (emailInput && passwordInput) {
-      emailInput.value = demoEmail;
-      passwordInput.value = demoPassword;
-      
-      // ログイン実行
-      await this.handleLogin();
+  async handleDemoLogin(event) {
+    event.preventDefault();
+    const emailField = document.getElementById('email');
+    const passwordField = document.getElementById('password');
+    if (emailField && passwordField) {
+      emailField.value = 'demo@banasuko.com';
+      passwordField.value = 'demo123';
+      const loginForm = document.getElementById('loginForm');
+      if (loginForm) {
+        this.handleLogin({ preventDefault: () => {}, target: loginForm });
+      }
     }
   }
 
   // ログアウト処理
   async handleLogout() {
     try {
-      await signOut(auth);
-      console.log('ログアウト成功');
-      
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
       this.showSuccess('ログアウトしました');
-      
-      // ログインページにリダイレクト
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 1000);
-      
+      this.onAuthStateChanged(null);
     } catch (error) {
       console.error('ログアウトエラー:', error);
-      this.showError('ログアウトに失敗しました');
+      this.showError('ネットワークエラーが発生しました');
     }
   }
 
-  // エラーメッセージ表示
-  showError(message) {
-    console.error('Auth Error:', message);
+  // ユーザー情報更新
+  updateUserInfo(user) {
+    document.querySelectorAll('.user-name').forEach(el => {
+      el.textContent = user.displayName || user.username;
+    });
+    document.querySelectorAll('.user-email').forEach(el => {
+      el.textContent = user.email;
+    });
+    document.querySelectorAll('.user-plan').forEach(el => {
+      el.textContent = this.getPlanDisplayName(user.plan);
+    });
+  }
+
+  // プラン表示名取得
+  getPlanDisplayName(plan) {
+    const planNames = {
+      free: 'フリープラン',
+      basic: 'ベーシックプラン',
+      premium: 'プレミアムプラン'
+    };
+    return planNames[plan] || plan;
+  }
+  
+  // 以下、UI操作関連のメソッド（変更なし）
+  setLoading(isLoading, type = 'login') {
+    const submitBtn = document.querySelector(`#${type}Form button[type="submit"]`);
+    const loadingSpinner = document.querySelector(`#${type}Form .loading-spinner`);
     
-    // エラーメッセージ要素があれば表示
-    const errorElement = document.getElementById('errorMessage');
-    if (errorElement) {
-      errorElement.textContent = message;
-      errorElement.style.display = 'block';
-      
-      // 5秒後に自動非表示
+    if (submitBtn) {
+      submitBtn.disabled = isLoading;
+      submitBtn.innerHTML = isLoading ? 
+        '<span class="loading-spinner"></span> 処理中...' : 
+        type === 'login' ? 'ログイン' : '登録';
+    }
+  }
+
+  showError(message, type = 'login') {
+    const errorDiv = document.querySelector(`#${type}Form .error-message`);
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
       setTimeout(() => {
-        errorElement.style.display = 'none';
+        errorDiv.style.display = 'none';
       }, 5000);
     }
-    
-    // アラートでも表示
-    alert(message);
   }
 
-  // 成功メッセージ表示
-  showSuccess(message) {
-    console.log('Auth Success:', message);
-    
-    // 成功メッセージ要素があれば表示
-    const successElement = document.getElementById('successMessage');
-    if (successElement) {
-      successElement.textContent = message;
-      successElement.style.display = 'block';
-      
-      // 3秒後に自動非表示
+  showSuccess(message, type = 'login') {
+    const successDiv = document.querySelector(`#${type}Form .success-message`);
+    if (successDiv) {
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
       setTimeout(() => {
-        successElement.style.display = 'none';
+        successDiv.style.display = 'none';
       }, 3000);
     }
   }
 
-  // 現在のユーザーを取得
+  getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
   getCurrentUser() {
     return currentUser;
   }
 
-  // 認証準備完了かチェック
-  isReady() {
-    return isAuthReady;
+  isAuthenticated() {
+    return !!currentUser;
   }
 }
 
-// ページ読み込み時に認証マネージャーを初期化
+// DOM読み込み完了時に初期化
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('認証システム初期化開始');
+  console.log('バナスコAI 認証システム初期化開始');
   window.authManager = new AuthManager();
 });
 
-// グローバルに公開
-window.AuthManager = AuthManager;
-window.login = login;
-window.register = register;
+// グローバル関数として公開
+window.getCurrentUser = () => window.authManager?.getCurrentUser();
+window.isAuthenticated = () => window.authManager?.isAuthenticated();
