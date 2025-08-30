@@ -54,6 +54,28 @@ export async function onRequestPost(context) {
       plan: 'free'
     };
     
+    // プロファイル作成APIを呼び出してFirestoreに保存
+    try {
+      const profileResponse = await fetch(`${c.req.url.replace('/register', '/user/profile')}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: uid,
+          email: email,
+          displayName: displayName || username,
+          plan: 'free'
+        })
+      });
+      
+      if (profileResponse.ok) {
+        console.log('✅ User profile created in Firestore');
+      } else {
+        console.warn('⚠️ Failed to create user profile in Firestore');
+      }
+    } catch (profileError) {
+      console.error('💥 Profile creation error:', profileError);
+    }
+    
     console.log('✅ Registration successful:', userData.email);
     
     const response = new Response(JSON.stringify({

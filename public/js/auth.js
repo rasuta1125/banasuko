@@ -118,8 +118,9 @@ class AuthManager {
     
     // ログアウトボタン
     document.addEventListener('click', (e) => {
-      if (e.target.matches('.logout-btn, .logout-btn *')) {
+      if (e.target.matches('.logout-btn, .logout-btn *, #logoutBtn, #logoutBtn *')) {
         e.preventDefault();
+        console.log('🚪 Logout button clicked');
         this.handleLogout();
       }
     });
@@ -211,6 +212,7 @@ class AuthManager {
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
+              uid: data.user.uid, // 登録APIから返されたUIDを使用
               email: registerData.email,
               displayName: registerData.displayName,
               plan: 'free' // デフォルトでフリープランを付与
@@ -247,29 +249,80 @@ class AuthManager {
   // デモログイン処理
   async handleDemoLogin(event) {
     event.preventDefault();
+    console.log('🎭 Demo login initiated');
+    
     const emailField = document.getElementById('email');
     const passwordField = document.getElementById('password');
+    
     if (emailField && passwordField) {
       emailField.value = 'demo@banasuko.com';
       passwordField.value = 'demo123';
-      const loginForm = document.getElementById('loginForm');
-      if (loginForm) {
-        this.handleLogin({ preventDefault: () => {}, target: loginForm });
+      
+      // フォームデータを作成してログイン処理を実行
+      const formData = new FormData();
+      formData.append('email', 'demo@banasuko.com');
+      formData.append('password', 'demo123');
+      formData.append('username', 'demo');
+      
+      const loginData = {
+        email: 'demo@banasuko.com',
+        password: 'demo123',
+        username: 'demo'
+      };
+      
+      this.setLoading(true, 'login');
+      try {
+        console.log('🔐 Demo login request sent');
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(loginData),
+          credentials: 'include'
+        });
+        
+        console.log('📡 Demo login response status:', response.status);
+        const data = await response.json();
+        console.log('📡 Demo login response data:', data);
+        
+        if (data.success) {
+          this.showSuccess('デモログインしました！');
+          this.onAuthStateChanged(data.user);
+        } else {
+          this.showError(data.error || 'デモログインに失敗しました');
+        }
+      } catch (error) {
+        console.error('💥 デモログインエラー:', error);
+        this.showError('ネットワークエラーが発生しました');
+      } finally {
+        this.setLoading(false, 'login');
       }
+    } else {
+      console.error('💥 Demo login form fields not found');
+      this.showError('ログインフォームが見つかりません');
     }
   }
 
   // ログアウト処理
   async handleLogout() {
     try {
-      await fetch('/api/auth/logout', {
+      console.log('🚪 Logout request sent');
+      const response = await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
       });
-      this.showSuccess('ログアウトしました');
-      this.onAuthStateChanged(null);
+      
+      console.log('📡 Logout response status:', response.status);
+      const data = await response.json();
+      console.log('📡 Logout response data:', data);
+      
+      if (data.success) {
+        this.showSuccess('ログアウトしました');
+        this.onAuthStateChanged(null);
+      } else {
+        this.showError(data.error || 'ログアウトに失敗しました');
+      }
     } catch (error) {
-      console.error('ログアウトエラー:', error);
+      console.error('💥 ログアウトエラー:', error);
       this.showError('ネットワークエラーが発生しました');
     }
   }
