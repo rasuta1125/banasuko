@@ -84,42 +84,7 @@ async function analyzeSingleImage(openai: OpenAI, base64Image: string): Promise<
       temperature: 0.1
     })
 
-// OpenAI APIレスポンスからテキストを安全に取り出す関数
-function extractTextFromResponse(resp: any): string {
-  // Chat Completions API (従来)
-  try {
-    const choices = resp?.choices?.[0]
-    if (choices?.message?.content) {
-      return choices.message.content
-    }
-  } catch (e) {
-    console.warn("Traditional response extraction failed:", e)
-  }
-
-  // Responses API (新) に寄せた返却型のケア
-  try {
-    if (resp?.output_text) {
-      return resp.output_text
-    }
-  } catch (e) {
-    console.warn("Output text extraction failed:", e)
-  }
-
-  // その他の可能性を試行
-  try {
-    if (resp?.output?.[0]?.content?.[0]?.text) {
-      return resp.output[0].content[0].text
-    }
-  } catch (e) {
-    console.warn("Alternative extraction failed:", e)
-  }
-
-  // デバッグ用：生レスポンスをログ出力
-  console.log("Full response structure:", JSON.stringify(resp, null, 2))
-  throw new Error("OpenAI API response structure is unrecognized")
-}
-
-    const content = extractTextFromResponse(response)
+    const content = response.choices[0]?.message?.content
     if (!content) {
       throw new Error('OpenAI API response is empty')
     }
@@ -166,9 +131,34 @@ app.post('*', async (c) => {
       return c.json({ success: false, error: 'No image file provided' }, 400)
     }
 
+    // ファイル形式とサイズの検証
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
+    const maxSize = 10 * 1024 * 1024 // 10MB
+
+    if (!allowedTypes.includes(imageFile.type)) {
+      return c.json({ 
+        success: false, 
+        error: `Unsupported file type: ${imageFile.type}. Only JPEG, JPG, and PNG are supported.` 
+      }, 400)
+    }
+
+    if (imageFile.size > maxSize) {
+      return c.json({ 
+        success: false, 
+        error: `File too large: ${imageFile.size} bytes. Maximum size is ${maxSize} bytes.` 
+      }, 400)
+    }
+
     // 画像をBase64に変換
     const arrayBuffer = await imageFile.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer); const base64 = btoa(String.fromCharCode(...uint8Array))
+    const uint8Array = new Uint8Array(arrayBuffer)
+    
+    // より安全なBase64変換
+    let base64 = ''
+    for (let i = 0; i < uint8Array.length; i++) {
+      base64 += String.fromCharCode(uint8Array[i])
+    }
+    base64 = btoa(base64)
 
     // OpenAI Vision API で分析
     const result = await analyzeSingleImage(openai, base64)
@@ -185,7 +175,9 @@ app.post('*', async (c) => {
       error: error instanceof Error ? error.message : 'Unknown error',
       debug: {
         timestamp: new Date().toISOString(),
-        environment: 'pages-function'
+        environment: 'pages-function',
+        errorType: error.constructor.name,
+        stack: error instanceof Error ? error.stack : undefined
       }
     }, 500)
   }

@@ -311,11 +311,13 @@ const Analysis = {
         this.showResults(result.data, isABMode);
         Utils.showToast('分析が完了しました', 'success');
       } else {
-        Utils.showToast(result.error || '分析に失敗しました', 'error');
+        console.error('Analysis API error:', result);
+        const errorMessage = result.error || result.debug?.error || '分析に失敗しました';
+        Utils.showToast(`分析エラー: ${errorMessage}`, 'error');
       }
     } catch (error) {
       console.error('Analysis error:', error);
-      Utils.showToast('分析中にエラーが発生しました', 'error');
+      Utils.showToast(`分析中にエラーが発生しました: ${error.message}`, 'error');
     } finally {
       this.setAnalyzing(false);
     }
