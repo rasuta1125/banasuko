@@ -80,10 +80,46 @@ async function analyzeSingleImage(openai: OpenAI, base64Image: string): Promise<
         }
       ],
       max_tokens: 1500,
+      timeout: 60000, // 60秒タイムアウト追加
       temperature: 0.1
     })
 
-    const content = response.choices[0]?.message?.content
+// OpenAI APIレスポンスからテキストを安全に取り出す関数
+function extractTextFromResponse(resp: any): string {
+  // Chat Completions API (従来)
+  try {
+    const choices = resp?.choices?.[0]
+    if (choices?.message?.content) {
+      return choices.message.content
+    }
+  } catch (e) {
+    console.warn("Traditional response extraction failed:", e)
+  }
+
+  // Responses API (新) に寄せた返却型のケア
+  try {
+    if (resp?.output_text) {
+      return resp.output_text
+    }
+  } catch (e) {
+    console.warn("Output text extraction failed:", e)
+  }
+
+  // その他の可能性を試行
+  try {
+    if (resp?.output?.[0]?.content?.[0]?.text) {
+      return resp.output[0].content[0].text
+    }
+  } catch (e) {
+    console.warn("Alternative extraction failed:", e)
+  }
+
+  // デバッグ用：生レスポンスをログ出力
+  console.log("Full response structure:", JSON.stringify(resp, null, 2))
+  throw new Error("OpenAI API response structure is unrecognized")
+}
+
+    const content = extractTextFromResponse(response)
     if (!content) {
       throw new Error('OpenAI API response is empty')
     }
@@ -132,7 +168,7 @@ app.post('*', async (c) => {
 
     // 画像をBase64に変換
     const arrayBuffer = await imageFile.arrayBuffer()
-    const base64 = Buffer.from(arrayBuffer).toString('base64')
+    const uint8Array = new Uint8Array(arrayBuffer); const base64 = btoa(String.fromCharCode(...uint8Array))
 
     // OpenAI Vision API で分析
     const result = await analyzeSingleImage(openai, base64)

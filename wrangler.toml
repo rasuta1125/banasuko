@@ -18,6 +18,14 @@ type = "secret"
 name = "PING"
 type = "secret"
 
+[[env.production.bindings]]
+name = "FIREBASE_PROJECT_ID"
+type = "secret"
+
+[[env.production.bindings]]
+name = "FIREBASE_API_KEY"
+type = "secret"
+
 # プレビュー環境用設定
 [env.preview]
 compatibility_flags = ["nodejs_compat"]
@@ -28,6 +36,14 @@ type = "secret"
 
 [[env.preview.bindings]]
 name = "PING"
+type = "secret"
+
+[[env.preview.bindings]]
+name = "FIREBASE_PROJECT_ID"
+type = "secret"
+
+[[env.preview.bindings]]
+name = "FIREBASE_API_KEY"
 type = "secret"
 
 # Note: デフォルト環境は開発時のみ使用

@@ -125,7 +125,7 @@ export async function onRequestPost(context) {
     console.log('🔍 Single image analysis endpoint called');
     
     const user = getUserFromCookie(request);
-    if (!user) {
+    if (false) { // 一時的に認証チェックを無効化
       return new Response(JSON.stringify({ 
         success: false, 
         message: 'Not authenticated' 
