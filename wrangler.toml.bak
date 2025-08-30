@@ -1,0 +1,46 @@
+name = "banasuko"
+compatibility_date = "2025-08-21"
+pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
+
+[functions]
+directory = "functions"
+
+# プロダクション環境用設定
+[env.production]
+[[env.production.bindings]]
+name = "FIREBASE_PROJECT_ID"
+type = "secret"
+
+[[env.production.bindings]]
+name = "FIREBASE_API_KEY"
+type = "secret"compatibility_flags = ["nodejs_compat"]
+
+[[env.production.bindings]]
+name = "OPENAI_API_KEY"
+type = "secret"
+
+[[env.production.bindings]]
+name = "PING"
+type = "secret"
+
+# プレビュー環境用設定
+[env.preview]
+[[env.preview.bindings]]
+name = "FIREBASE_PROJECT_ID"
+type = "secret"
+
+[[env.preview.bindings]]
+name = "FIREBASE_API_KEY"
+type = "secret"compatibility_flags = ["nodejs_compat"]
+
+[[env.preview.bindings]]
+name = "OPENAI_API_KEY"
+type = "secret"
+
+[[env.preview.bindings]]
+name = "PING"
+type = "secret"
+
+# Note: デフォルト環境は開発時のみ使用
+# プロダクション・プレビューは環境変数でCloudflare Dashboardから設定

@@ -37,12 +37,18 @@ class AuthManager {
   // 認証状態チェック
   async checkAuthState() {
     try {
+      console.log('🔍 Checking authentication state...');
       const response = await fetch('/api/auth/user', {
         method: 'GET',
         credentials: 'include'
       });
+      
+      console.log('📡 Auth check response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📡 Auth check response data:', data);
+        
         if (data.success) {
           this.onAuthStateChanged(data.user);
           return;
@@ -50,7 +56,7 @@ class AuthManager {
       }
       this.onAuthStateChanged(null);
     } catch (error) {
-      console.error('認証状態チェックエラー:', error);
+      console.error('💥 認証状態チェックエラー:', error);
       this.onAuthStateChanged(null);
     }
   }
@@ -134,13 +140,17 @@ class AuthManager {
 
     this.setLoading(true, 'login');
     try {
+      console.log('🔐 Attempting login for:', email);
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginData),
         credentials: 'include'
       });
+      
+      console.log('📡 Login response status:', response.status);
       const data = await response.json();
+      console.log('📡 Login response data:', data);
 
       if (data.success) {
         this.showSuccess('ログインしました！');
@@ -149,7 +159,7 @@ class AuthManager {
         this.showError(data.error || 'ログインに失敗しました');
       }
     } catch (error) {
-      console.error('ログインエラー:', error);
+      console.error('💥 ログインエラー:', error);
       this.showError('ネットワークエラーが発生しました');
     } finally {
       this.setLoading(false, 'login');
@@ -178,20 +188,25 @@ class AuthManager {
 
     this.setLoading(true, 'register');
     try {
+      console.log('📝 Attempting registration for:', registerData.email);
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerData),
         credentials: 'include'
       });
+      
+      console.log('📡 Registration response status:', response.status);
       const data = await response.json();
+      console.log('📡 Registration response data:', data);
 
       if (data.success) {
         this.showSuccess('アカウントが作成されました！', 'register');
         
         // ★★★ 修正点：Firestoreにプロフィールを作成する ★★★
         try {
-          await fetch('/api/user/profile', {
+          console.log('📝 Creating user profile...');
+          const profileResponse = await fetch('/api/user/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -201,10 +216,18 @@ class AuthManager {
               plan: 'free' // デフォルトでフリープランを付与
             })
           });
-          console.log('Firestoreにユーザープロフィールを作成しました。');
+          
+          const profileData = await profileResponse.json();
+          console.log('📡 Profile creation response:', profileData);
+          
+          if (profileData.success) {
+            console.log('✅ Firestoreにユーザープロフィールを作成しました。');
+          } else {
+            console.warn('⚠️ プロフィール作成に失敗:', profileData.error);
+          }
         } catch (profileError) {
-          console.error('Firestoreプロファイル作成エラー:', profileError);
-          this.showError('プロフィールの作成に失敗しました。', 'register');
+          console.error('💥 Firestoreプロファイル作成エラー:', profileError);
+          // プロフィール作成に失敗しても登録は成功とする
         }
 
         // 登録成功後、そのままログイン状態にする
@@ -214,7 +237,7 @@ class AuthManager {
         this.showError(data.error || 'アカウント作成に失敗しました', 'register');
       }
     } catch (error) {
-      console.error('登録エラー:', error);
+      console.error('💥 登録エラー:', error);
       this.showError('ネットワークエラーが発生しました', 'register');
     } finally {
       this.setLoading(false, 'register');
