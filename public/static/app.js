@@ -270,24 +270,51 @@ const Analysis = {
     const isABMode = AppState.analysisMode === 'ab';
     const endpoint = isABMode ? '/api/analysis/compare' : '/api/analysis/single';
     
+    // 画像データの確認
+    if (isABMode) {
+      if (!AppState.uploadedImages.A || !AppState.uploadedImages.B) {
+        Utils.showToast('A/B比較には2つの画像が必要です', 'error');
+        return;
+      }
+    } else {
+      if (!AppState.uploadedImages.single) {
+        Utils.showToast('分析する画像をアップロードしてください', 'error');
+        return;
+      }
+    }
+    
     // UI状態更新
     this.setAnalyzing(true);
     
     try {
-      // APIコール（実際にはファイルアップロードが必要だが、デモでは省略）
-      const result = await Utils.apiCall(endpoint, {
-        mode: AppState.analysisMode,
-        // 実際の実装では画像データも送信
+      // FormDataを使用して画像データを送信
+      const formData = new FormData();
+      formData.append('mode', AppState.analysisMode);
+      
+      if (isABMode) {
+        formData.append('imageA', AppState.uploadedImages.A);
+        formData.append('imageB', AppState.uploadedImages.B);
+      } else {
+        formData.append('image', AppState.uploadedImages.single);
+      }
+      
+      // POSTリクエストで画像データを送信
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData
       });
       
+      const result = await response.json();
+      
       if (result.success) {
-        AppState.currentResults = result.result;
-        this.showResults(result.result, isABMode);
+        AppState.currentResults = result.data;
+        this.showResults(result.data, isABMode);
         Utils.showToast('分析が完了しました', 'success');
       } else {
-        Utils.showToast(result.message, 'error');
+        Utils.showToast(result.error || '分析に失敗しました', 'error');
       }
     } catch (error) {
+      console.error('Analysis error:', error);
       Utils.showToast('分析中にエラーが発生しました', 'error');
     } finally {
       this.setAnalyzing(false);
@@ -796,10 +823,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // 画像アップロード初期化
-  ImageUpload.initSingleUpload();
-  ImageUpload.initABUpload();
-  ImageUpload.initCopyUpload();
+  // 画像アップロード初期化 - HTML要素の準備が完全に整うのを少し待つ
+  setTimeout(() => {
+    ImageUpload.initSingleUpload();
+    ImageUpload.initABUpload();
+    ImageUpload.initCopyUpload();
+  }, 100); // 100ミリ秒の遅延を追加
   
   // 分析ボタン
   const analyzeButton = document.getElementById('analyzeButton');
