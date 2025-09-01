@@ -73,9 +73,6 @@ class UserDashboard {
     // 画像アップロード機能
     this.setupUploadFunctionality();
     
-    // カメラ機能
-    this.setupCameraFunctionality();
-    
     // セッション変更イベントのリスナー
     window.addEventListener('sessionChange', this.handleSessionChange.bind(this));
   }
@@ -267,96 +264,6 @@ class UserDashboard {
           </div>
         </div>
       `;
-    }
-  }
-
-  // カメラ機能設定
-  setupCameraFunctionality() {
-    const cameraCard = document.getElementById('cameraCard');
-    const cameraModal = document.getElementById('cameraModal');
-    const closeCameraModal = document.getElementById('closeCameraModal');
-    const captureBtn = document.getElementById('captureBtn');
-    const stopCameraBtn = document.getElementById('stopCameraBtn');
-
-    // カメラカードクリック
-    if (cameraCard) {
-      cameraCard.addEventListener('click', () => {
-        this.startCamera();
-      });
-    }
-
-    // モーダル閉じる
-    if (closeCameraModal) {
-      closeCameraModal.addEventListener('click', () => {
-        this.stopCamera();
-      });
-    }
-
-    // 撮影ボタン
-    if (captureBtn) {
-      captureBtn.addEventListener('click', () => {
-        this.captureImage();
-      });
-    }
-
-    // 停止ボタン
-    if (stopCameraBtn) {
-      stopCameraBtn.addEventListener('click', () => {
-        this.stopCamera();
-      });
-    }
-  }
-
-  // カメラ開始
-  async startCamera() {
-    const cameraModal = document.getElementById('cameraModal');
-    const cameraVideo = document.getElementById('cameraVideo');
-
-    if (cameraModal) cameraModal.style.display = 'block';
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (cameraVideo) {
-        cameraVideo.srcObject = stream;
-      }
-    } catch (error) {
-      console.error('カメラエラー:', error);
-      this.showError('カメラにアクセスできません');
-    }
-  }
-
-  // カメラ停止
-  stopCamera() {
-    const cameraModal = document.getElementById('cameraModal');
-    const cameraVideo = document.getElementById('cameraVideo');
-
-    if (cameraVideo && cameraVideo.srcObject) {
-      const stream = cameraVideo.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
-      cameraVideo.srcObject = null;
-    }
-
-    if (cameraModal) cameraModal.style.display = 'none';
-  }
-
-  // 画像撮影
-  captureImage() {
-    const cameraVideo = document.getElementById('cameraVideo');
-    const cameraCanvas = document.getElementById('cameraCanvas');
-
-    if (cameraVideo && cameraCanvas) {
-      const context = cameraCanvas.getContext('2d');
-      cameraCanvas.width = cameraVideo.videoWidth;
-      cameraCanvas.height = cameraVideo.videoHeight;
-      context.drawImage(cameraVideo, 0, 0);
-
-      // CanvasからBlobを取得
-      cameraCanvas.toBlob((blob) => {
-        const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
-        this.handleImageSelection(file);
-        this.stopCamera();
-      }, 'image/jpeg');
     }
   }
 
