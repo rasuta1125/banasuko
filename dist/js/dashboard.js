@@ -6,23 +6,35 @@ class UserDashboard {
     this.currentUser = null;
     this.usageStats = null;
     this.selectedPlan = null;
-    
     this.init();
   }
 
   async init() {
     try {
-      // 認証状態チェック
-      await this.checkAuthState();
+      // ★★★ 修正点：auth.jsの初期化を待機し、直接ユーザー情報を取得 ★★★
+      // authManagerが初期化されるのを少し待つ
+      await new Promise(resolve => {
+        const checkAuthManager = () => {
+          if (window.authManager && window.getCurrentUser()) {
+            resolve();
+          } else {
+            setTimeout(checkAuthManager, 100);
+          }
+        };
+        checkAuthManager();
+      });
+
+      this.currentUser = window.getCurrentUser();
       
       if (!this.currentUser) {
+        // auth.jsがリダイレクトするので、ここでの処理は不要な場合が多いが念のため
         window.location.href = '/login';
         return;
       }
+      this.updateUserInfo(this.currentUser);
 
       // イベントリスナー設定
       this.setupEventListeners();
-      
       // データ読み込み
       await this.loadDashboardData();
       
@@ -33,29 +45,8 @@ class UserDashboard {
     }
   }
 
-  // 認証状態チェック
-  async checkAuthState() {
-    try {
-      const response = await fetch('/api/auth/user', {
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          this.currentUser = data.user;
-          this.updateUserInfo(data.user);
-          return;
-        }
-      }
-
-      // 認証されていない
-      this.currentUser = null;
-    } catch (error) {
-      console.error('認証状態チェックエラー:', error);
-      this.currentUser = null;
-    }
-  }
+  // ★★★ 修正点：重複する認証チェック関数を削除 ★★★
+  // checkAuthState() は削除
 
   // イベントリスナー設定
   setupEventListeners() {
@@ -98,17 +89,24 @@ class UserDashboard {
     document.querySelectorAll('.logout-btn').forEach(btn => {
       btn.addEventListener('click', this.handleLogout.bind(this));
     });
+
+    // ナビゲーションリンク
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = link.getAttribute('href');
+        if (href) {
+          window.location.href = href;
+        }
+      });
+    });
   }
 
   // ダッシュボードデータ読み込み
   async loadDashboardData() {
     try {
-      // 使用統計取得
       await this.loadUsageStats();
-      
-      // 最近のアクティビティ取得
       await this.loadRecentActivity();
-      
     } catch (error) {
       console.error('ダッシュボードデータ読み込みエラー:', error);
     }
@@ -120,7 +118,6 @@ class UserDashboard {
       const response = await fetch('/api/usage/dashboard', {
         credentials: 'include'
       });
-
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -132,18 +129,17 @@ class UserDashboard {
       console.error('使用統計読み込みエラー:', error);
     }
   }
-
+  
   // 最近のアクティビティ読み込み
   async loadRecentActivity() {
     try {
-      const response = await fetch('/api/usage/dashboard', {
+      const response = await fetch('/api/activity/recent', {
         credentials: 'include'
       });
-
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.data.recentActivity) {
-          this.displayRecentActivity(data.data.recentActivity);
+        if (data.success) {
+          this.displayRecentActivity(data.activities);
         }
       }
     } catch (error) {
@@ -153,130 +149,123 @@ class UserDashboard {
 
   // ユーザー情報更新
   updateUserInfo(user) {
-    // ユーザー名
     document.querySelectorAll('.user-name').forEach(el => {
       el.textContent = user.displayName || user.username;
     });
-
-    // メールアドレス  
     document.querySelectorAll('.user-email').forEach(el => {
       el.textContent = user.email;
     });
-
-    // プラン名
     document.querySelectorAll('.user-plan').forEach(el => {
       el.textContent = this.getPlanDisplayName(user.plan);
     });
-
-    // プランに応じたUIの調整
     this.updatePlanUI(user.plan);
   }
 
   // 使用状況表示更新
   updateUsageDisplay(stats) {
-    const actionTypes = ['single_analysis', 'ab_comparison', 'copy_generation'];
-    
-    actionTypes.forEach(actionType => {
-      const current = stats.currentUsage[actionType] || 0;
-      const limit = stats.limits[actionType];
-      const percentage = stats.usagePercentage[actionType] || 0;
+    const usageContainer = document.getElementById('usageStats');
+    if (!usageContainer || !stats) return;
 
-      // 使用量表示
-      const usageEl = document.querySelector(`.usage-${actionType.replace('_', '-')}`);
-      if (usageEl) {
-        const limitText = limit === -1 ? '無制限' : limit.toString();
-        usageEl.textContent = `${current}/${limitText}`;
-      }
-
-      // プログレスバー
-      const progressEl = document.getElementById(`${this.camelCase(actionType)}Progress`);
-      if (progressEl) {
-        progressEl.style.width = `${Math.min(percentage, 100)}%`;
+    const usageHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center">
+            <div class="p-2 rounded-full bg-blue-100 text-blue-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-600">今月の使用回数</p>
+              <p class="text-2xl font-semibold text-gray-900">${stats.monthlyUsage || 0}</p>
+            </div>
+          </div>
+        </div>
         
-        // 色変更（使用率に応じて）
-        if (percentage >= 90) {
-          progressEl.className = progressEl.className.replace(/bg-\w+-\w+/, 'bg-red-500');
-        } else if (percentage >= 70) {
-          progressEl.className = progressEl.className.replace(/bg-\w+-\w+/, 'bg-yellow-500');
-        }
-      }
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center">
+            <div class="p-2 rounded-full bg-green-100 text-green-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-600">残り使用回数</p>
+              <p class="text-2xl font-semibold text-gray-900">${stats.remainingUsage || 0}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center">
+            <div class="p-2 rounded-full bg-purple-100 text-purple-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-600">現在のプラン</p>
+              <p class="text-2xl font-semibold text-gray-900">${this.getPlanDisplayName(stats.currentPlan)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
 
-      // パーセンテージ表示
-      const percentageEl = document.getElementById(`${this.camelCase(actionType)}Percentage`);
-      if (percentageEl) {
-        percentageEl.textContent = limit === -1 ? '無制限' : `${percentage}%`;
-      }
-    });
-
-    // リセットまでの日数
-    const daysUntilResetEl = document.getElementById('daysUntilReset');
-    if (daysUntilResetEl && stats.daysUntilReset) {
-      daysUntilResetEl.textContent = stats.daysUntilReset;
-    }
+    usageContainer.innerHTML = usageHTML;
   }
-
+  
   // 最近のアクティビティ表示
   displayRecentActivity(activities) {
-    const container = document.getElementById('recentActivity');
-    if (!container) return;
+    const activityContainer = document.getElementById('recentActivity');
+    if (!activityContainer || !activities) return;
 
     if (activities.length === 0) {
-      container.innerHTML = `
-        <div class="text-center py-8 text-gray-500">
-          <i class="fas fa-history text-2xl mb-2"></i>
-          <p>アクティビティがありません</p>
+      activityContainer.innerHTML = `
+        <div class="text-center py-8">
+          <p class="text-gray-500">まだアクティビティがありません</p>
         </div>
       `;
       return;
     }
 
-    const activityHTML = activities.slice(0, 5).map(activity => {
-      const timeAgo = this.getTimeAgo(activity.timestamp);
-      const iconMap = {
-        single_analysis: { icon: 'fas fa-chart-line', color: 'cyber-blue' },
-        ab_comparison: { icon: 'fas fa-balance-scale', color: 'cyber-green' },
-        copy_generation: { icon: 'fas fa-magic', color: 'cyber-pink' }
-      };
-      
-      const actionIcon = iconMap[activity.actionType] || { icon: 'fas fa-cog', color: 'gray-400' };
-      
-      return `
-        <div class="flex items-center p-3 bg-navy-700/30 rounded-lg">
-          <div class="w-8 h-8 bg-${actionIcon.color}/20 rounded-lg flex items-center justify-center mr-3">
-            <i class="${actionIcon.icon} text-${actionIcon.color} text-sm"></i>
-          </div>
-          <div class="flex-1">
-            <p class="text-white text-sm">${this.getActionDisplayName(activity.actionType)}</p>
-            <p class="text-gray-400 text-xs">${timeAgo}</p>
+    const activityHTML = activities.map(activity => `
+      <div class="flex items-center space-x-4 p-4 border-b border-gray-200 last:border-b-0">
+        <div class="flex-shrink-0">
+          <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
           </div>
         </div>
-      `;
-    }).join('');
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-900">
+            ${this.getActionDisplayName(activity.actionType)}
+          </p>
+          <p class="text-sm text-gray-500">
+            ${this.getTimeAgo(activity.timestamp)}
+          </p>
+        </div>
+      </div>
+    `).join('');
 
-    container.innerHTML = activityHTML;
+    activityContainer.innerHTML = activityHTML;
   }
 
   // プラン変更モーダル表示
   showPlanChangeModal(plan) {
     this.selectedPlan = plan;
-    
     const modal = document.getElementById('planChangeModal');
-    const planNameEl = document.getElementById('newPlanName');
-    const planPriceEl = document.getElementById('newPlanPrice');
-
-    const planInfo = {
-      basic: { name: 'ベーシックプラン', price: '¥2,980/月' },
-      premium: { name: 'プレミアムプラン', price: '¥9,800/月' }
-    };
-
-    if (planNameEl) planNameEl.textContent = planInfo[plan].name;
-    if (planPriceEl) planPriceEl.textContent = planInfo[plan].price;
-
-    if (modal) {
+    const planName = document.getElementById('planName');
+    const planPrice = document.getElementById('planPrice');
+    
+    if (modal && planName && planPrice) {
+      planName.textContent = this.getPlanDisplayName(plan);
+      planPrice.textContent = this.getPlanPrice(plan);
       modal.classList.remove('hidden');
     }
   }
-
+  
   // プラン変更モーダル非表示
   hidePlanChangeModal() {
     const modal = document.getElementById('planChangeModal');
@@ -285,35 +274,36 @@ class UserDashboard {
     }
     this.selectedPlan = null;
   }
-
+  
   // プラン変更確定
   async confirmPlanChange() {
     if (!this.selectedPlan) return;
 
     try {
       const response = await fetch('/api/user/plan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          newPlan: this.selectedPlan
-        }),
-        credentials: 'include'
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ plan: this.selectedPlan })
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        this.showSuccess('プランが変更されました！');
-        this.hidePlanChangeModal();
-        
-        // ユーザー情報とダッシュボードを更新
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          this.showSuccess('プランを変更しました');
+          this.currentUser.plan = this.selectedPlan;
+          this.updateUserInfo(this.currentUser);
+          this.hidePlanChangeModal();
+          
+          // ページをリロードして最新の使用状況を取得
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          this.showError(data.error || 'プラン変更に失敗しました');
+        }
       } else {
-        this.showError(data.error || 'プラン変更に失敗しました');
+        this.showError('プラン変更に失敗しました');
       }
     } catch (error) {
       console.error('プラン変更エラー:', error);
@@ -322,38 +312,24 @@ class UserDashboard {
   }
 
   // ログアウト処理
-  async handleLogout() {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        this.showSuccess('ログアウトしました');
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 1000);
-      } else {
-        this.showError('ログアウトに失敗しました');
-      }
-    } catch (error) {
-      console.error('ログアウトエラー:', error);
-      this.showError('ネットワークエラーが発生しました');
+  handleLogout() {
+    // ログアウトはauthManagerに任せる
+    if (window.authManager) {
+      window.authManager.handleLogout();
     }
   }
 
   // プランUIの更新
   updatePlanUI(userPlan) {
-    // 現在のプランのボタンを無効化
-    document.querySelectorAll('.upgrade-plan-btn').forEach(btn => {
-      const btnPlan = btn.getAttribute('data-plan');
-      if (btnPlan === userPlan) {
-        btn.textContent = '現在のプラン';
-        btn.className = 'w-full bg-gray-600 text-gray-400 py-2 rounded-lg cursor-not-allowed';
-        btn.disabled = true;
+    // 現在のプランに応じてUIを更新
+    document.querySelectorAll('.plan-badge').forEach(badge => {
+      const planType = badge.getAttribute('data-plan');
+      if (planType === userPlan) {
+        badge.classList.add('bg-green-100', 'text-green-800');
+        badge.classList.remove('bg-gray-100', 'text-gray-800');
+      } else {
+        badge.classList.remove('bg-green-100', 'text-green-800');
+        badge.classList.add('bg-gray-100', 'text-gray-800');
       }
     });
   }
@@ -362,19 +338,29 @@ class UserDashboard {
   getPlanDisplayName(plan) {
     const planNames = {
       free: 'フリープラン',
-      basic: 'ベーシックプラン', 
+      basic: 'ベーシックプラン',
       premium: 'プレミアムプラン'
     };
     return planNames[plan] || plan;
   }
 
+  getPlanPrice(plan) {
+    const planPrices = {
+      free: '無料',
+      basic: '¥1,980/月',
+      premium: '¥3,980/月'
+    };
+    return planPrices[plan] || '要問い合わせ';
+  }
+
   getActionDisplayName(actionType) {
     const actionNames = {
-      single_analysis: 'AI広告診断を実行',
-      ab_comparison: 'A/B比較分析を実行',
-      copy_generation: 'AIコピー生成を実行'
+      'copy_generation': 'コピー生成',
+      'analysis': '分析実行',
+      'login': 'ログイン',
+      'plan_change': 'プラン変更'
     };
-    return actionNames[actionType] || actionType;
+    return actionNames[actionType] || this.camelCase(actionType);
   }
 
   camelCase(str) {
@@ -383,20 +369,20 @@ class UserDashboard {
 
   getTimeAgo(timestamp) {
     const now = new Date();
-    const time = new Date(timestamp.seconds * 1000);
-    const diffMs = now - time;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
 
-    if (diffMins < 1) return '1分前';
-    if (diffMins < 60) return `${diffMins}分前`;
-    if (diffHours < 24) return `${diffHours}時間前`;
-    if (diffDays < 30) return `${diffDays}日前`;
-    
-    return time.toLocaleDateString();
+    if (diffInSeconds < 60) {
+      return '今';
+    } else if (diffInSeconds < 3600) {
+      return `${Math.floor(diffInSeconds / 60)}分前`;
+    } else if (diffInSeconds < 86400) {
+      return `${Math.floor(diffInSeconds / 3600)}時間前`;
+    } else {
+      return `${Math.floor(diffInSeconds / 86400)}日前`;
+    }
   }
-
+  
   // メッセージ表示
   showSuccess(message) {
     this.showToast(message, 'success');
@@ -407,32 +393,28 @@ class UserDashboard {
   }
 
   showToast(message, type = 'info') {
-    // 簡単なトースト表示
+    // トースト通知の実装
     const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
-    
-    toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+    toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+      type === 'success' ? 'bg-green-500 text-white' : 
+      type === 'error' ? 'bg-red-500 text-white' : 
+      'bg-blue-500 text-white'
+    }`;
     toast.textContent = message;
     
     document.body.appendChild(toast);
     
-    // アニメーション
     setTimeout(() => {
-      toast.classList.remove('translate-x-full');
-    }, 100);
-    
-    // 自動削除
-    setTimeout(() => {
-      toast.classList.add('translate-x-full');
-      setTimeout(() => {
-        document.body.removeChild(toast);
-      }, 300);
+      toast.remove();
     }, 3000);
   }
 }
 
 // DOM読み込み完了時に初期化
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('ユーザーダッシュボード初期化開始');
-  window.userDashboard = new UserDashboard();
+  // dashboard.jsはダッシュボード関連ページでのみ初期化
+  if (document.querySelector('.dashboard-container')) { // ダッシュボードページのコンテナ要素などを指定
+      console.log('ユーザーダッシュボード初期化開始');
+      window.userDashboard = new UserDashboard();
+  }
 });
