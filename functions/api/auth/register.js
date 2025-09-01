@@ -93,6 +93,34 @@ export async function onRequestPost(context) {
       plan: 'free'
     };
     
+    // Firestoreにユーザープロファイルを作成
+    try {
+      console.log('📝 Creating Firestore profile for new user:', userData.uid);
+      
+      const profileResponse = await fetch(`${request.url.replace('/api/auth/register', '/api/user/profile')}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': `bn_session=uid:${userData.uid}`
+        },
+        body: JSON.stringify({
+          email: userData.email,
+          displayName: userData.displayName,
+          plan: userData.plan
+        })
+      });
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        console.log('✅ Firestore profile created:', profileData);
+      } else {
+        console.warn('⚠️ Firestore profile creation failed, but user registration succeeded');
+      }
+    } catch (profileError) {
+      console.warn('⚠️ Firestore profile creation error:', profileError);
+      // Firestore失敗でもユーザー登録は成功とする
+    }
+    
     const response = new Response(JSON.stringify({
       success: true,
       user: userData,
