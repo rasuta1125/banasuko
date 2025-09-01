@@ -3,10 +3,6 @@ compatibility_date = "2025-08-21"
 pages_build_output_dir = "./dist"
 compatibility_flags = ["nodejs_compat"]
 
-# Functions設定
-[functions]
-directory = "functions"
-
 # プロダクション環境用設定
 [env.production]
 compatibility_flags = ["nodejs_compat"]
