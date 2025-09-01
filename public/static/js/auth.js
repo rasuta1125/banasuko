@@ -1,5 +1,4 @@
-// バナスコAI - シンプルで確実なログイン機能
-// 初代バナスコのバックエンドAPIを使用
+// バナスコAI - 統一セッション管理対応ログイン機能
 
 // ローディング状態管理
 function setLoading(isLoading) {
@@ -58,7 +57,7 @@ function hideMessages() {
   }
 }
 
-// フォーム送信処理（初代バナスコのAPIエンドポイントを使用）
+// フォーム送信処理（統一セッション管理システムを使用）
 document.addEventListener('DOMContentLoaded', function() {
   console.log('バナスコAI ログインシステム初期化');
   
@@ -78,25 +77,14 @@ document.addEventListener('DOMContentLoaded', function() {
       hideMessages();
       
       try {
-        // 初代バナスコのAPIエンドポイントを使用
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({ email, password })
-        });
+        // 統一セッション管理システムを使用
+        const result = await window.sessionManager.login(email, password);
         
-        const data = await response.json();
-        
-        if (data.success) {
+        if (result.success) {
           showSuccess('ログインに成功しました！ダッシュボードにリダイレクトします...');
-          setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 1500);
+          // セッション管理システムが自動的にリダイレクトを処理
         } else {
-          showError(data.error || 'ログインに失敗しました');
+          showError(result.error || 'ログインに失敗しました');
         }
       } catch (error) {
         showError('ネットワークエラーが発生しました');
@@ -144,15 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ログアウト機能（ダッシュボード用）
 function logout() {
-  fetch('/api/auth/logout', {
-    method: 'POST',
-    credentials: 'include'
-  }).then(() => {
-    window.location.href = '/login';
-  }).catch(error => {
-    console.error('Logout error:', error);
-    window.location.href = '/login';
-  });
+  window.sessionManager.logout();
 }
 
 // グローバルに公開

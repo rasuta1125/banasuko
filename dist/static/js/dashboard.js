@@ -1,5 +1,5 @@
 // バナスコAI ユーザーダッシュボード JavaScript
-// 統一ログイン情報対応
+// 統一セッション管理対応
 
 class UserDashboard {
   constructor() {
@@ -12,13 +12,18 @@ class UserDashboard {
 
   async init() {
     try {
-      // 認証状態チェック
-      await this.checkAuthState();
+      // 統一セッション管理システムを使用
+      await this.waitForSessionManager();
       
-      if (!this.currentUser) {
+      // 認証状態チェック
+      if (!window.sessionManager.isLoggedIn()) {
+        console.log('🔒 認証されていません。ログインページにリダイレクト');
         window.location.href = '/login';
         return;
       }
+
+      this.currentUser = window.sessionManager.getCurrentUser();
+      console.log('✅ 認証済みユーザー:', this.currentUser.email);
 
       // イベントリスナー設定
       this.setupEventListeners();
@@ -33,30 +38,18 @@ class UserDashboard {
     }
   }
 
-  // 認証状態チェック（統一ログイン情報対応）
-  async checkAuthState() {
-    try {
-      // セッションクッキーからユーザー情報を取得
-      const response = await fetch('/api/auth/user', {
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          this.currentUser = data.user;
-          this.updateUserInfo(data.user);
-          return;
-        }
-      }
-
-      // 認証されていない場合はログインページにリダイレクト
-      this.currentUser = null;
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('認証状態チェックエラー:', error);
-      this.currentUser = null;
-      window.location.href = '/login';
+  // セッション管理システムの準備完了を待機
+  async waitForSessionManager() {
+    let attempts = 0;
+    const maxAttempts = 50; // 5秒間待機
+    
+    while (!window.sessionManager && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
+    if (!window.sessionManager) {
+      throw new Error('セッション管理システムが利用できません');
     }
   }
 
@@ -82,6 +75,23 @@ class UserDashboard {
     
     // カメラ機能
     this.setupCameraFunctionality();
+    
+    // セッション変更イベントのリスナー
+    window.addEventListener('sessionChange', this.handleSessionChange.bind(this));
+  }
+
+  // セッション変更イベントハンドラー
+  handleSessionChange(event) {
+    const { type, user } = event.detail;
+    
+    if (type === 'logout') {
+      console.log('🚪 ログアウト検知。ログインページにリダイレクト');
+      window.location.href = '/login';
+    } else if (type === 'login' && user) {
+      console.log('🔐 ログイン検知。ユーザー情報更新');
+      this.currentUser = user;
+      this.updateUserInfo(user);
+    }
   }
 
   // 画像アップロード機能設定
@@ -350,23 +360,13 @@ class UserDashboard {
     }
   }
 
-  // ログアウト処理（統一ログイン情報対応）
+  // ログアウト処理（統一セッション管理システム使用）
   async handleLogout() {
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        window.location.href = '/login';
-      } else {
-        // エラーでもログインページにリダイレクト
-        window.location.href = '/login';
-      }
+      await window.sessionManager.logout();
+      // セッション管理システムが自動的にリダイレクトを処理
     } catch (error) {
       console.error('ログアウトエラー:', error);
-      // エラーでもログインページにリダイレクト
       window.location.href = '/login';
     }
   }
@@ -374,6 +374,9 @@ class UserDashboard {
   // ダッシュボードデータ読み込み
   async loadDashboardData() {
     try {
+      // ユーザー情報表示更新
+      this.updateUserInfo(this.currentUser);
+      
       // デモ用の統計データ
       this.updateStats({
         totalAnalyses: 0,
