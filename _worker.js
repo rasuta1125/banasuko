@@ -86,7 +86,7 @@ async function handleApi(request, env) {
     if (token === 'demo-token') {
       return json({ 
         success: true, 
-        user: { uid: 'demo-user-id', email: 'banasuko.com', plan: 'free' } 
+        user: { uid: 'demo-user-id', email: 'demo@banasuko.com', plan: 'free' } 
       });
     }
     
@@ -161,40 +161,45 @@ export default {
     
     // Static assets - served by Pages
     try {
-      // まず、リクエストされたパスで静的ファイルを探す
-      const response = await env.ASSETS.fetch(request);
+      // 直接的なファイルパスで静的ファイルを探す
+      let response = await env.ASSETS.fetch(request);
       
       // ファイルが見つかった場合はそのまま返す
-      if (response.status !== 404) {
+      if (response.status === 200) {
         return response;
       }
       
-      // ファイルが見つからない場合は、SPAルーティングとしてindex.htmlを返す
-      const indexRequest = new Request(new URL('/index.html', request.url));
-      const indexResponse = await env.ASSETS.fetch(indexRequest);
+      // ファイルが見つからない場合の処理
+      const pathname = url.pathname;
       
-      if (indexResponse.status === 200) {
-        return new Response(indexResponse.body, {
-          ...indexResponse,
-          headers: { ...indexResponse.headers, 'Content-Type': 'text/html' }
-        });
+      // 特定のルートの場合はindex.htmlを返す（SPAルーティング）
+      if (pathname === '/login' || pathname === '/dashboard' || pathname === '/') {
+        const indexRequest = new Request(new URL('/index.html', request.url));
+        response = await env.ASSETS.fetch(indexRequest);
+        
+        if (response.status === 200) {
+          return new Response(response.body, {
+            ...response,
+            headers: { ...response.headers, 'Content-Type': 'text/html' }
+          });
+          }
       }
       
-      // index.htmlも見つからない場合は404
+      // それでも見つからない場合は404
       return new Response('Not Found', { status: 404 });
       
     } catch (error) {
       console.error('Error serving static assets:', error);
       
-      // エラーの場合もSPAルーティングを試す
+      // エラーの場合のフォールバック
       try {
         const indexRequest = new Request(new URL('/index.html', request.url));
-        const indexResponse = await env.ASSETS.fetch(indexRequest);
+        const response = await env.ASSETS.fetch(indexRequest);
         
-        if (indexResponse.status === 200) {
-          return new Response(indexResponse.body, {
-            ...indexResponse,
-            headers: { ...indexResponse.headers, 'Content-Type': 'text/html' }
+        if (response.status === 200) {
+          return new Response(response.body, {
+            ...response,
+            headers: { ...response.headers, 'Content-Type': 'text/html' }
           });
         }
       } catch (fallbackError) {
