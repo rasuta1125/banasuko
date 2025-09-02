@@ -1,5 +1,5 @@
 // 初代バナスコの新規登録ロジックを移植
-// バナスコAI - ユーザー登録機能
+// バナスコAI - ユーザー登録機能（Cookie認証統一版）
 
 // Firebase REST API設定（初代バナスコと同じ）
 const FIREBASE_AUTH_BASE_URL = "https://identitytoolkit.googleapis.com/v1/accounts:";
@@ -23,10 +23,11 @@ async function createUserWithEmailAndPassword(email, password, apiKey) {
   return await response.json();
 }
 
-// セッション管理
+// セッション管理（Cookie認証統一版）
 function setUserSession(response, userData) {
+  // Cookie認証統一: auth-tokenを使用
   const sessionValue = userData.idToken || `uid:${userData.uid}`;
-  response.headers.set('Set-Cookie', `bn_session=${sessionValue}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400`);
+  response.headers.set('Set-Cookie', `auth-token=${sessionValue}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400`);
 }
 
 // POST - 新規登録処理（初代バナスコのロジックを移植）
@@ -101,7 +102,7 @@ export async function onRequestPost(context) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cookie': `bn_session=uid:${userData.uid}`
+          'Cookie': `auth-token=uid:${userData.uid}`
         },
         body: JSON.stringify({
           email: userData.email,

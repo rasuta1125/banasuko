@@ -1,4 +1,4 @@
-// バナスコAI - 統一セッション管理システム
+// バナスコAI - 統一セッション管理システム（Cookie認証統一版）
 // 全ページでログイン情報を共有
 
 class SessionManager {
@@ -11,7 +11,7 @@ class SessionManager {
   }
 
   async init() {
-    console.log('🔄 セッション管理システム初期化');
+    console.log('🔄 セッション管理システム初期化（Cookie認証統一版）');
     
     // セッション状態をチェック
     await this.checkSession();
@@ -38,6 +38,7 @@ class SessionManager {
   // 実際のセッションチェック処理
   async _performSessionCheck() {
     try {
+      // Cookie認証統一: credentials: 'include' を必須
       const response = await fetch('/api/auth/user', {
         method: 'GET',
         credentials: 'include'
@@ -73,6 +74,7 @@ class SessionManager {
     try {
       console.log('🔐 ログイン処理開始:', email);
 
+      // Cookie認証統一: credentials: 'include' を必須
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -107,6 +109,7 @@ class SessionManager {
     try {
       console.log('📝 新規登録処理開始:', email);
 
+      // Cookie認証統一: credentials: 'include' を必須
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -141,6 +144,7 @@ class SessionManager {
     try {
       console.log('🚪 ログアウト処理開始');
 
+      // Cookie認証統一: credentials: 'include' を必須
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
@@ -214,7 +218,7 @@ window.sessionManager = new SessionManager();
 
 // ページ読み込み時の自動処理
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('📄 ページ読み込み完了 - セッション管理開始');
+  console.log('📄 ページ読み込み完了 - セッション管理開始（Cookie認証統一版）');
   
   // 現在のページに応じた処理
   const currentPath = window.location.pathname;

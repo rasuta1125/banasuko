@@ -1,5 +1,5 @@
-// 初代バナスコの認証ロジックを移植
-// バナスコAI - ログイン・登録機能
+// 初代バナスコの新規登録ロジックを移植
+// バナスコAI - ユーザー登録機能（Cookie認証統一版）
 
 // Firebase REST API設定（初代バナスコと同じ）
 const FIREBASE_AUTH_BASE_URL = "https://identitytoolkit.googleapis.com/v1/accounts:";
@@ -23,29 +23,11 @@ async function signInWithEmailAndPassword(email, password, apiKey) {
   return await response.json();
 }
 
-// 初代バナスコのcreate_user_with_email_and_password関数を移植
-async function createUserWithEmailAndPassword(email, password, apiKey) {
-  const url = `${FIREBASE_AUTH_BASE_URL}signUp?key=${apiKey}`;
-  const data = { email, password, returnSecureToken: true };
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
-  }
-  
-  return await response.json();
-}
-
-// セッション管理
+// セッション管理（Cookie認証統一版）
 function setUserSession(response, userData) {
+  // Cookie認証統一: auth-tokenを使用
   const sessionValue = userData.idToken || `uid:${userData.uid}`;
-  response.headers.set('Set-Cookie', `bn_session=${sessionValue}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400`);
+  response.headers.set('Set-Cookie', `auth-token=${sessionValue}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400`);
 }
 
 // POST - ログイン処理（初代バナスコのロジックを移植）
