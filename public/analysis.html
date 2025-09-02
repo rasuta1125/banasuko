@@ -23,7 +23,40 @@
     <h1 class="text-3xl font-extrabold text-cyber-green mb-2">AI広告診断</h1>
     <p class="text-gray-300 mb-8">最先端 banaAI Vision が画像を分析し、効果予測と改善提案を返します。</p>
 
-    <!-- 基本情報（当時UIを再現） -->
+    <!-- 媒体選択セクション（新規追加） -->
+    <section class="card p-6 mb-8">
+      <div class="section-title">🎯 媒体選択</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <label class="block">
+          <div class="label">プラットフォーム</div>
+          <select id="platform" class="input" onchange="handlePlatformChange(this.value)">
+            <option value="">選択してください</option>
+            <option value="instagram-post">Instagram投稿</option>
+            <option value="instagram-ad">Instagram広告</option>
+            <option value="gdn">Googleディスプレイ広告</option>
+            <option value="yahoo">Yahooディスプレイ広告</option>
+          </select>
+        </label>
+        <div>
+          <div class="label">採点方式</div>
+          <div id="scoringTypeInfo" class="text-sm text-gray-400 mt-2">
+            プラットフォームを選択してください
+          </div>
+        </div>
+      </div>
+      
+      <!-- Instagram広告の場合の詳細選択 -->
+      <div id="instagramAdType" class="mt-4 hidden">
+        <div class="label">広告タイプ</div>
+        <select id="instagramAdTypeSelect" class="input">
+          <option value="story">ストーリー広告</option>
+          <option value="feed">フィード広告</option>
+          <option value="reels">リール広告</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- 基本情報（既存保持） -->
     <section class="card p-6 mb-8">
       <div class="section-title">🧩 基本情報</div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -48,7 +81,24 @@
       </div>
     </section>
 
-    <!-- A/Bモード -->
+    <!-- 分析タイプ切り替え（新規追加） -->
+    <section class="card p-6 mb-8">
+      <div class="section-title mb-4">🔄 分析タイプ</div>
+      <div class="flex gap-4">
+        <button id="singleBtn" data-analysis-type="single" 
+                class="px-6 py-3 bg-cyber-purple text-white rounded-lg font-medium transition-all"
+                onclick="switchAnalysisType('single')">
+          📊 シングル分析
+        </button>
+        <button id="abBtn" data-analysis-type="ab" 
+                class="px-6 py-3 bg-gray-700 text-gray-300 rounded-lg font-medium transition-all"
+                onclick="switchAnalysisType('ab')">
+          🆚 A/B比較分析
+        </button>
+      </div>
+    </section>
+
+    <!-- A/Bモード（既存保持） -->
     <section class="card p-6 mb-8">
       <div class="flex items-center justify-between">
         <div class="section-title">🆚 A/B比較分析モード</div>
@@ -58,14 +108,14 @@
         </label>
       </div>
 
-      <!-- シングル -->
+      <!-- シングル（既存保持） -->
       <div id="singleUploader" class="mt-4">
         <div class="label">画像をアップロード（PNG/JPG/WebP, 5MBまで）</div>
         <input id="singleInput" type="file" accept="image/*" />
         <div id="singlePreview" class="mt-3 preview"></div>
       </div>
 
-      <!-- A/B -->
+      <!-- A/B（既存保持） -->
       <div id="abUploader" class="mt-4 hidden">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -82,19 +132,70 @@
       </div>
     </section>
 
-    <!-- 診断実行 -->
+    <!-- ドラッグ&ドロップ対応アップロードエリア（新規追加） -->
     <section class="card p-6 mb-8">
-      <div class="section-title mb-3">🚀 AI分析</div>
+      <div class="section-title mb-4">📁 ドラッグ&ドロップアップロード</div>
+      
+      <!-- シングル分析用 -->
+      <div id="singleUpload" class="space-y-4">
+        <div id="dropZone" class="border-2 border-dashed border-cyber-purple/40 rounded-lg p-8 text-center cursor-pointer hover:border-cyber-purple/60 transition-colors">
+          <i class="fas fa-cloud-upload-alt text-4xl text-cyber-purple mb-4"></i>
+          <p class="text-lg text-white mb-2">画像をドラッグ&ドロップ</p>
+          <p class="text-sm text-gray-400">またはクリックしてファイルを選択</p>
+          <input id="imageUpload" type="file" accept="image/*" class="hidden" />
+        </div>
+        
+        <!-- プレビューエリア -->
+        <div id="imagePreview" class="hidden">
+          <div class="label">プレビュー</div>
+          <img id="previewImage" class="max-w-full h-auto rounded-lg border border-cyber-purple/40" />
+          <div id="imageName" class="text-sm text-gray-400 mt-2"></div>
+        </div>
+      </div>
+
+      <!-- A/B比較用 -->
+      <div id="abUpload" class="space-y-4 hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div class="label">パターンA</div>
+            <div id="dropZoneA" class="border-2 border-dashed border-cyber-blue/40 rounded-lg p-6 text-center cursor-pointer hover:border-cyber-blue/60 transition-colors">
+              <i class="fas fa-image text-3xl text-cyber-blue mb-2"></i>
+              <p class="text-sm text-white">画像Aをドラッグ&ドロップ</p>
+              <input id="imageUploadA" type="file" accept="image/*" class="hidden" />
+            </div>
+            <div id="imagePreviewA" class="hidden mt-3">
+              <img id="previewImageA" class="max-w-full h-auto rounded-lg border border-cyber-blue/40" />
+            </div>
+          </div>
+          
+          <div>
+            <div class="label">パターンB</div>
+            <div id="dropZoneB" class="border-2 border-dashed border-cyber-pink/40 rounded-lg p-6 text-center cursor-pointer hover:border-cyber-pink/60 transition-colors">
+              <i class="fas fa-image text-3xl text-cyber-pink mb-2"></i>
+              <p class="text-sm text-white">画像Bをドラッグ&ドロップ</p>
+              <input id="imageUploadB" type="file" accept="image/*" class="hidden" />
+            </div>
+            <div id="imagePreviewB" class="hidden mt-3">
+              <img id="previewImageB" class="max-w-full h-auto rounded-lg border border-cyber-pink/40" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 診断実行（既存保持） -->
+    <section class="card p-6 mb-8">
+      <div class="section-title mb-3">�� AI分析</div>
       <button id="analyzeBtn" class="btn-primary">AI分析開始</button>
       <span id="state" class="text-sm ml-3"></span>
       <div id="error" class="text-red-400 text-sm mt-3 hidden"></div>
     </section>
 
-    <!-- 結果 -->
+    <!-- 結果（既存保持） -->
     <section id="resultsSection" class="card p-6 mb-8 hidden">
       <div class="section-title">📊 分析結果</div>
 
-      <!-- シングル結果 -->
+      <!-- シングル結果（既存保持） -->
       <div id="singleResults" class="mt-4">
         <div class="text-lg font-bold">総合スコア: <span id="totalScore">—</span> / 100</div>
         <div id="scoreLevel" class="text-sm text-gray-300 mt-1"></div>
@@ -105,14 +206,14 @@
           </div>
           <div>
             <div class="subtitle">改善点</div>
-            <ul id="improvementsList" class="list-disc list-inside text-sm text-gray-200 mt-1"></ul>
+            <ul id="improvementsList" class="list-disc list-inside text-sm text-gray-200 mt-1"></div>
           </div>
         </div>
         <div class="subtitle mt-6">所見</div>
         <div id="reasoning" class="text-sm text-gray-300 mt-1"></div>
       </div>
 
-      <!-- A/B結果 -->
+      <!-- A/B結果（既存保持） -->
       <div id="abResults" class="mt-4 hidden">
         <div class="text-lg font-bold">
           勝者: <span id="winnerBadge" class="badge">—</span>
@@ -129,6 +230,9 @@
         </div>
       </div>
     </section>
+
+    <!-- 詳細な結果表示セクション（新規追加） -->
+    <section id="analysisResult" class="mt-8"></section>
   </main>
 </body>
 </html>
