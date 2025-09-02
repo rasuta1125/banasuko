@@ -3,69 +3,132 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>画像採点 | バナスコAI</title>
+  <title>AI広告診断 | バナスコAI</title>
 
-  <!-- 既存のスタイルを流用（絶対パスで参照） -->
+  <!-- 既存テーマを流用（絶対パスで崩れ防止） -->
   <link rel="stylesheet" href="/static/style.css" />
   <script defer src="/static/js/analysis.js"></script>
 </head>
 <body class="min-h-screen">
   <header class="container mx-auto py-4 flex items-center justify-between">
-    <a href="/" class="logo">Banasuko AI</a>
+    <a href="/" class="logo">バナスコAI</a>
     <nav class="flex gap-4">
       <a href="/login">ログイン</a>
       <a href="/dashboard">ダッシュボード</a>
-      <a href="/analysis" aria-current="page">採点</a>
+      <a href="/analysis" aria-current="page">AI診断</a>
     </nav>
   </header>
 
-  <main class="container mx-auto py-8">
-    <h1 class="text-2xl font-bold mb-4">画像採点</h1>
+  <main class="container mx-auto py-10">
+    <h1 class="text-3xl font-extrabold text-cyber-green mb-2">AI広告診断</h1>
+    <p class="text-gray-300 mb-8">最先端 banaAI Vision が画像を分析し、効果予測と改善提案を返します。</p>
 
-    <!-- アップロード + 実行 -->
-    <form id="analyzeForm" class="space-y-4">
-      <div>
-        <label class="block mb-1">画像を選択（PNG / JPG / WebP）</label>
-        <input type="file" name="image" id="imageInput" accept="image/*" required />
-        <p class="text-xs text-gray-400 mt-1">最大 5MB 推奨</p>
+    <!-- 基本情報（当時UIを再現） -->
+    <section class="card p-6 mb-8">
+      <div class="section-title">🧩 基本情報</div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <label class="block">
+          <div class="label">表示名</div>
+          <input id="displayName" class="input" placeholder="あなたの名前" />
+        </label>
+        <label class="block">
+          <div class="label">ターゲット年代</div>
+          <select id="targetAge" class="input">
+            <option>指定なし</option><option>10代</option><option>20代</option>
+            <option>30代</option><option>40代</option><option>50代以上</option>
+          </select>
+        </label>
+        <label class="block">
+          <div class="label">媒体</div>
+          <select id="channel" class="input">
+            <option>指定なし</option><option>Instagram</option><option>X(旧Twitter)</option>
+            <option>Facebook</option><option>バナー広告</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <!-- A/Bモード -->
+    <section class="card p-6 mb-8">
+      <div class="flex items-center justify-between">
+        <div class="section-title">🆚 A/B比較分析モード</div>
+        <label class="inline-flex items-center gap-2">
+          <input type="checkbox" id="abMode" />
+          <span class="text-sm">有効にする</span>
+        </label>
       </div>
 
-      <button type="submit" id="analyzeBtn" class="btn-primary">採点する</button>
-      <span id="analyzeState" class="text-sm ml-2"></span>
-    </form>
+      <!-- シングル -->
+      <div id="singleUploader" class="mt-4">
+        <div class="label">画像をアップロード（PNG/JPG/WebP, 5MBまで）</div>
+        <input id="singleInput" type="file" accept="image/*" />
+        <div id="singlePreview" class="mt-3 preview"></div>
+      </div>
 
-    <!-- エラー -->
-    <div id="analyzeError" class="mt-3 text-red-500 text-sm" style="display:none;"></div>
+      <!-- A/B -->
+      <div id="abUploader" class="mt-4 hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div class="label">画像A</div>
+            <input id="aInput" type="file" accept="image/*" />
+            <div id="aPreview" class="mt-3 preview"></div>
+          </div>
+          <div>
+            <div class="label">画像B</div>
+            <input id="bInput" type="file" accept="image/*" />
+            <div id="bPreview" class="mt-3 preview"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 診断実行 -->
+    <section class="card p-6 mb-8">
+      <div class="section-title mb-3">🚀 AI分析</div>
+      <button id="analyzeBtn" class="btn-primary">AI分析開始</button>
+      <span id="state" class="text-sm ml-3"></span>
+      <div id="error" class="text-red-400 text-sm mt-3 hidden"></div>
+    </section>
 
     <!-- 結果 -->
-    <section id="analyzeResult" class="mt-6" style="display:none;">
-      <div class="text-lg font-semibold">
-        スコア: <span id="scoreValue">—</span> / 100
+    <section id="resultsSection" class="card p-6 mb-8 hidden">
+      <div class="section-title">📊 分析結果</div>
+
+      <!-- シングル結果 -->
+      <div id="singleResults" class="mt-4">
+        <div class="text-lg font-bold">総合スコア: <span id="totalScore">—</span> / 100</div>
+        <div id="scoreLevel" class="text-sm text-gray-300 mt-1"></div>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <div class="subtitle">強み</div>
+            <ul id="strengthsList" class="list-disc list-inside text-sm text-gray-200 mt-1"></ul>
+          </div>
+          <div>
+            <div class="subtitle">改善点</div>
+            <ul id="improvementsList" class="list-disc list-inside text-sm text-gray-200 mt-1"></ul>
+          </div>
+        </div>
+        <div class="subtitle mt-6">所見</div>
+        <div id="reasoning" class="text-sm text-gray-300 mt-1"></div>
       </div>
 
-      <div id="scoreLevel" class="mt-1 text-sm text-gray-300"></div>
-
-      <div class="mt-3">
-        <h3 class="font-semibold text-sm">理由・所見</h3>
-        <div id="scoreReason" class="text-sm text-gray-300 mt-1"></div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        <div>
-          <h4 class="font-semibold text-sm">強み</h4>
-          <ul id="strengthsList" class="list-disc list-inside text-sm text-gray-200 mt-1"></ul>
+      <!-- A/B結果 -->
+      <div id="abResults" class="mt-4 hidden">
+        <div class="text-lg font-bold">
+          勝者: <span id="winnerBadge" class="badge">—</span>
         </div>
-        <div>
-          <h4 class="font-semibold text-sm">改善点</h4>
-          <ul id="improvementsList" class="list-disc list-inside text-sm text-gray-200 mt-1"></ul>
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div class="result-card">
+            <div class="subtitle">A: <span id="scoreA">—</span>/100</div>
+            <div id="whyA" class="text-sm text-gray-300 mt-1"></div>
+          </div>
+          <div class="result-card">
+            <div class="subtitle">B: <span id="scoreB">—</span>/100</div>
+            <div id="whyB" class="text-sm text-gray-300 mt-1"></div>
+          </div>
         </div>
       </div>
     </section>
   </main>
-
-  <footer class="container mx-auto py-8 text-xs text-gray-500">
-    © Banasuko
-  </footer>
 </body>
 </html>

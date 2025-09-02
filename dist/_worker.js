@@ -248,6 +248,53 @@ async function handleApi(request, env) {
       };
       
       return json(analysisResult);
+  // A/B比較分析機能
+  if (pathname === '/api/analysis/compare' && request.method === 'POST') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (!token || (token !== 'demo-token' && !token.startsWith('user-'))) {
+      return json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+    
+    try {
+      const formData = await request.formData();
+      const imageA = formData.get('imageA');
+      const imageB = formData.get('imageB');
+      
+      if (!imageA || !imageB) {
+        return json({ success: false, error: 'A/B両方の画像が必要です' }, { status: 400 });
+      }
+      
+      // ファイルサイズチェック（5MB制限）
+      if (imageA.size > 5 * 1024 * 1024 || imageB.size > 5 * 1024 * 1024) {
+        return json({ success: false, error: '画像ファイルが大きすぎます（5MB以下にしてください）' }, { status: 400 });
+      }
+      
+      // ファイルタイプチェック
+      const allowedTypes = [image/jpeg', image/jpg', image/png', image/webp'];
+      if (!allowedTypes.includes(imageA.type) || !allowedTypes.includes(imageB.type)) {
+        return json({ success: false, error: 'サポートされていないファイル形式です（JPEG, PNG, WebPのみ）' }, { status: 400 });
+      }
+      
+      // デモ用のA/B比較結果（後でOpenAI Vision APIに置換）
+      const compareResult = {
+        success: true,
+        winner: 'A',
+        scores: { A: 82, B: 76 },
+        scores: { A: 82, B: 76 },
+        reasons: {
+          A: 'コントラストが強く、視認性が高い。ブランドカラーが統一されている。',
+          B: 'デザインは良いが、テキストの可読性がやや低い。'
+        }
+      };
+      
+      return json(compareResult);
+      
+    } catch (error) {
+      console.error('A/B comparison error:', error);
+      return json({ success: false, error: 'A/B比較分析中にエラーが発生しました' }, { status: 400 });
+    }
+  }
       
     } catch (error) {
       console.error('Image analysis error:', error);
