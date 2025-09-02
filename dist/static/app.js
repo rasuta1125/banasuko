@@ -85,8 +85,99 @@ const Utils = {
   }
 };
 
-// 認証機能は public/static/js/auth.js の AuthManager で統一管理
-// このファイルは分析・UI機能専用
+// 認証機能
+const Auth = {
+  // ログイン処理
+  async login(username, password) {
+    const loginButton = document.getElementById('loginButton');
+    const buttonText = document.getElementById('loginButtonText');
+    const spinner = document.getElementById('loginSpinner');
+    
+    // ローディング状態
+    loginButton.disabled = true;
+    buttonText.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    
+    try {
+      const result = await Utils.apiCall('/api/auth/login', { username, password });
+      
+      if (result.success) {
+        AppState.currentUser = result.user;
+        localStorage.setItem('banasuko_user', JSON.stringify(result.user));
+        localStorage.setItem('banasuko_token', result.token);
+        
+        this.showMessage('successMessage', 'successText', 'ログインが成功しました！');
+        Utils.showToast('ログインが成功しました', 'success');
+        
+        // 3秒後にホームページにリダイレクト
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
+      } else {
+        this.showMessage('errorMessage', 'errorText', result.message);
+      }
+    } catch (error) {
+      this.showMessage('errorMessage', 'errorText', 'サーバーエラーが発生しました');
+    } finally {
+      // ローディング状態解除
+      loginButton.disabled = false;
+      buttonText.classList.remove('hidden');
+      spinner.classList.add('hidden');
+    }
+  },
+
+  // 登録処理
+  async register(username, email, password) {
+    const registerButton = document.getElementById('registerButton');
+    const buttonText = document.getElementById('registerButtonText');
+    const spinner = document.getElementById('registerSpinner');
+    
+    // ローディング状態
+    registerButton.disabled = true;
+    buttonText.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    
+    try {
+      const result = await Utils.apiCall('/api/auth/register', { username, email, password });
+      
+      if (result.success) {
+        this.showMessage('regSuccessMessage', 'regSuccessText', 'アカウントが作成されました！ログインしてください。');
+        Utils.showToast('アカウントが作成されました', 'success');
+        
+        // フォームをリセットしてログインフォームに戻る
+        setTimeout(() => {
+          document.getElementById('registerFormElement').reset();
+          document.getElementById('showLoginForm').click();
+        }, 2000);
+      } else {
+        this.showMessage('regErrorMessage', 'regErrorText', result.message);
+      }
+    } catch (error) {
+      this.showMessage('regErrorMessage', 'regErrorText', 'サーバーエラーが発生しました');
+    } finally {
+      // ローディング状態解除
+      registerButton.disabled = false;
+      buttonText.classList.remove('hidden');
+      spinner.classList.add('hidden');
+    }
+  },
+
+  // メッセージ表示
+  showMessage(containerId, textId, message) {
+    const container = document.getElementById(containerId);
+    const text = document.getElementById(textId);
+    
+    if (container && text) {
+      text.textContent = message;
+      container.classList.remove('hidden');
+      
+      // 5秒後に非表示
+      setTimeout(() => {
+        container.classList.add('hidden');
+      }, 5000);
+    }
+  }
+};
 
 // 画像アップロード機能
 const ImageUpload = {
@@ -270,54 +361,25 @@ const Analysis = {
     const isABMode = AppState.analysisMode === 'ab';
     const endpoint = isABMode ? '/api/analysis/compare' : '/api/analysis/single';
     
-    // 画像データの確認
-    if (isABMode) {
-      if (!AppState.uploadedImages.A || !AppState.uploadedImages.B) {
-        Utils.showToast('A/B比較には2つの画像が必要です', 'error');
-        return;
-      }
-    } else {
-      if (!AppState.uploadedImages.single) {
-        Utils.showToast('分析する画像をアップロードしてください', 'error');
-        return;
-      }
-    }
-    
     // UI状態更新
     this.setAnalyzing(true);
     
     try {
-      // FormDataを使用して画像データを送信
-      const formData = new FormData();
-      formData.append('mode', AppState.analysisMode);
-      
-      if (isABMode) {
-        formData.append('imageA', AppState.uploadedImages.A);
-        formData.append('imageB', AppState.uploadedImages.B);
-      } else {
-        formData.append('image', AppState.uploadedImages.single);
-      }
-      
-      // POSTリクエストで画像データを送信
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: formData
+      // APIコール（実際にはファイルアップロードが必要だが、デモでは省略）
+      const result = await Utils.apiCall(endpoint, {
+        mode: AppState.analysisMode,
+        // 実際の実装では画像データも送信
       });
       
-      const result = await response.json();
-      
       if (result.success) {
-        AppState.currentResults = result.data;
-        this.showResults(result.data, isABMode);
+        AppState.currentResults = result.result;
+        this.showResults(result.result, isABMode);
         Utils.showToast('分析が完了しました', 'success');
       } else {
-        console.error('Analysis API error:', result);
-        const errorMessage = result.error || result.debug?.error || '分析に失敗しました';
-        Utils.showToast(`分析エラー: ${errorMessage}`, 'error');
+        Utils.showToast(result.message, 'error');
       }
     } catch (error) {
-      console.error('Analysis error:', error);
-      Utils.showToast(`分析中にエラーが発生しました: ${error.message}`, 'error');
+      Utils.showToast('分析中にエラーが発生しました', 'error');
     } finally {
       this.setAnalyzing(false);
     }
@@ -734,34 +796,22 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // ログインフォーム - Firebase認証を使用
+  // ログインフォーム
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(loginForm);
-      
-      // Firebase認証モジュールをインポート
-      try {
-        const { login } = await import('/static/js/auth.js');
-        await login(formData.get('email'), formData.get('password'));
-      } catch (error) {
-        console.error('Login failed:', error);
-        Utils.showToast('ログインに失敗しました: ' + error.message, 'error');
-      }
+      await Auth.login(formData.get('username'), formData.get('password'));
     });
   }
   
-  // デモログインボタン - 修正版
+  // デモログインボタン
   const demoLoginButton = document.getElementById('demoLoginButton');
   if (demoLoginButton) {
     demoLoginButton.addEventListener('click', () => {
-      const emailField = document.getElementById('email');
-      const passwordField = document.getElementById('password');
-      if (emailField && passwordField) {
-        emailField.value = 'demo@banasuko.com';
-        passwordField.value = 'demo123';
-      }
+      document.getElementById('username').value = 'demo';
+      document.getElementById('password').value = 'demo123';
     });
   }
   
@@ -782,23 +832,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // 登録フォーム送信 - Firebase認証を使用
+  // 登録フォーム送信
   const registerFormElement = document.getElementById('registerFormElement');
   if (registerFormElement) {
     registerFormElement.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(registerFormElement);
-      
-      try {
-        const { register } = await import('/static/js/auth.js');
-        await register(
-          formData.get('email'),
-          formData.get('password')
-        );
-      } catch (error) {
-        console.error('Registration failed:', error);
-        Utils.showToast('登録に失敗しました: ' + error.message, 'error');
-      }
+      await Auth.register(
+        formData.get('username'),
+        formData.get('email'),
+        formData.get('password')
+      );
     });
   }
   
@@ -825,12 +869,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // 画像アップロード初期化 - HTML要素の準備が完全に整うのを少し待つ
-  setTimeout(() => {
-    ImageUpload.initSingleUpload();
-    ImageUpload.initABUpload();
-    ImageUpload.initCopyUpload();
-  }, 100); // 100ミリ秒の遅延を追加
+  // 画像アップロード初期化
+  ImageUpload.initSingleUpload();
+  ImageUpload.initABUpload();
+  ImageUpload.initCopyUpload();
   
   // 分析ボタン
   const analyzeButton = document.getElementById('analyzeButton');
