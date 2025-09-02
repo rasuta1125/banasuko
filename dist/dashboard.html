@@ -45,6 +45,14 @@
                         <p>バナー画像をアップロードして分析開始</p>
                         <button class="btn btn-primary">アップロード</button>
                     </div>
+                    <div class="action-card" id="cameraCard">
+                        <div class="action-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <h3>カメラで撮影</h3>
+                        <p>スマートフォンのカメラで直接撮影</p>
+                        <button class="btn btn-secondary">撮影開始</button>
+                    </div>
                     <div class="action-card" id="instagramCard">
                         <div class="action-icon">
                             <i class="fab fa-instagram"></i>
@@ -140,10 +148,37 @@
         </div>
     </div>
 
+    <!-- Camera Modal -->
+    <div id="cameraModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>カメラで撮影</h3>
+                <button class="modal-close" id="closeCameraModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="camera-container">
+                    <video id="cameraVideo" autoplay playsinline></video>
+                    <canvas id="cameraCanvas" style="display: none;"></canvas>
+                    <div class="camera-controls">
+                        <button class="btn btn-primary" id="captureBtn">
+                            <i class="fas fa-camera"></i>
+                            撮影
+                        </button>
+                        <button class="btn btn-secondary" id="stopCameraBtn">
+                            <i class="fas fa-stop"></i>
+                            停止
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
-    <script type="module" src="/static/app.js"></script>
-    <script type="module" src="/static/js/session-manager.js"></script>
     <script type="module" src="/static/js/auth.js"></script>
     <script type="module" src="/static/js/dashboard.js"></script>
+    <script type="module" src="/static/app.js"></script>
 </body>
 </html>
