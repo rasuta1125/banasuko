@@ -286,7 +286,7 @@ export default {
       const pathname = url.pathname;
       
       // 特定のルートの場合はindex.htmlを返す（SPAルーティング）
-      if (pathname === '/login' || pathname === '/dashboard' || pathname === '/') {
+      if (pathname === '/login' || pathname === '/dashboard' || pathname === '/analysis' || pathname === '/') {
         const indexRequest = new Request(new URL('/index.html', request.url));
         response = await env.ASSETS.fetch(indexRequest);
         
