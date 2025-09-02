@@ -19,79 +19,126 @@ function readCookie(request, name) {
   return cookie.split(';').map(x => x.trim())
     .find(x => x.startsWith(`${name}=`))?.split('=')[1];
 }
-function requireAuth(request) {
-  const token = readCookie(request, COOKIE_NAME);
-  return token ? { uid: 'demo-user-id', email: 'demo@banasuko.com', plan: 'free' } : null;
-}
 
 async function handleApi(request, env) {
-  const { pathname } = new URL(request.url);
+  const url = new URL(request.url);
+  const pathname = url.pathname;
 
-  // 健康診断
-  if (pathname === '/api/health' && request.method === 'GET') {
-    return json({ ok: true, from: '_worker.js', hasOpenAIKey: Boolean(env.OPENAI_API_KEY) });
-  }
-
-  // 認証
-  if (pathname === '/api/auth/login' && request.method === 'POST') {
-    const body = await request.json().catch(() => ({}));
-    const email = body.email || 'demo@banasuko.com';
-    const headers = new Headers(JSON_HEADERS);
-    headers.append('Set-Cookie', makeAuthCookie('demo-token'));
-    return new Response(JSON.stringify({ success: true, user: { email, plan: 'free' }}), { status: 200, headers });
-  }
-  if (pathname === '/api/auth/logout' && request.method === 'POST') {
-    const headers = new Headers(JSON_HEADERS);
-    headers.append('Set-Cookie', clearAuthCookie());
-    return new Response(JSON.stringify({ success: true }), { status: 200, headers });
-  }
-  if (pathname === '/api/auth/user' && request.method === 'GET') {
-    const user = requireAuth(request);
-    if (!user) return json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    return json({ success: true, user });
-  }
-
-  // プロフィール/使用量
-  if (pathname === '/api/user/profile' && request.method === 'GET') {
-    const user = requireAuth(request);
-    if (!user) return json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    return json({ success: true, plan: user.plan, user });
-  }
-  if (pathname === '/api/usage/dashboard' && request.method === 'GET') {
-    const user = requireAuth(request);
-    if (!user) return json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    return json({
-      success: true,
-      data: {
-        currentUsage: { single_analysis: 0, ab_comparison: 0, copy_generation: 0 },
-        limits: { single_analysis: 10, ab_comparison: 10, copy_generation: 10 },
-        usagePercentage: { single_analysis: 0, ab_comparison: 0, copy_generation: 0 },
-        daysUntilReset: 30,
-        recentActivity: []
-      }
+  // ヘルスチェック
+  if (pathname === '/api/health') {
+    return json({ 
+      ok: true, 
+      from: '_worker.js',
+      hasOpenAIKey: !!env.OPENAI_API_KEY 
     });
   }
 
-  // プラン変更
-  if (pathname === '/api/user/plan' && request.method === 'POST') {
-    const user = requireAuth(request);
-    if (!user) return json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    const body = await request.json().catch(() => ({}));
-    const plan = body.plan || 'free';
-    // 後で Firestore を更新する実装に置換
-    return json({ success: true, plan });
+  // 認証系
+  if (pathname === '/api/auth/login' && request.method === 'POST') {
+    try {
+      const body = await request.json();
+      const { email, password } = body;
+      
+      // デモアカウント認証（後でFirebaseに置換）
+      if (email === 'demo@banasuko.com' && password === 'demo123') {
+        return json(
+          { success: true, user: { email, plan: 'free' } },
+          { 
+            status: 200,
+            headers: { 'Set-Cookie': makeAuthCookie('demo-token') }
+          }
+        );
+      }
+      
+      return json({ success: false, error: '認証に失敗しました' }, { status: 401 });
+    } catch (error) {
+      return json({ success: false, error: 'リクエストの解析に失敗しました' }, { status: 400 });
+    }
   }
 
-  // 決済（Stripe Checkout）
-  if (pathname === '/api/billing/checkout' && request.method === 'POST') {
-    const user = requireAuth(request);
-    if (!user) return json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    const body = await request.json().catch(() => ({}));
-    const plan = body.plan;
-    if (!plan || !['basic', 'premium'].includes(plan)) {
-      return json({ success: false, error: 'invalid plan' }, { status: 400 });
+  if (pathname === '/api/auth/logout' && request.method === 'POST') {
+    return json(
+      { success: true },
+      { 
+        status: 200,
+        headers: { 'Set-Cookie': clearAuthCookie() }
+      }
+    );
+  }
+
+  if (pathname === '/api/auth/user' && request.method === 'GET') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (token === 'demo-token') {
+      return json({ 
+        success: true, 
+        user: { uid: 'demo-user-id', email: 'demo@banasuko.com', plan: 'free' } 
+      });
     }
-    // 後で本番の Stripe Checkout に置換
+    
+    return json({ success: false, error: '認証が必要です' }, { status: 401 });
+  }
+
+  // ユーザー管理
+  if (pathname === '/api/user/profile' && request.method === 'GET') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (token === 'demo-token') {
+      return json({ 
+        success: true, 
+        user: { uid: 'demo-user-id', email: 'banasuko.com', plan: 'free' } 
+      });
+    }
+    
+    return json({ success: false, error: '認証が必要です' }, { status: 401 });
+  }
+
+  if (pathname === '/api/usage/dashboard' && request.method === 'GET') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (token === 'demo-token') {
+      return json({ 
+        success: true, 
+        usage: { 
+          current: 3, 
+          limit: 10, 
+          plan: 'free' 
+        } 
+      });
+    }
+    
+    return json({ success: false, error: '認証が必要です' }, { status: 401 });
+  }
+
+  if (pathname === '/api/user/plan' && request.method === 'POST') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (token !== 'demo-token') {
+      return json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+    
+    try {
+      const body = await request.json();
+      const { plan } = body;
+      
+      if (plan === 'free') {
+        return json({ success: true, message: 'プランを無料に変更しました' });
+      }
+      
+      return json({ success: false, error: '無効なプランです' }, { status: 400 });
+    } catch (error) {
+      return json({ success: false, error: 'リクエストの解析に失敗しました' }, { status: 400 });
+    }
+  }
+
+  // 課金系
+  if (pathname === '/api/billing/checkout' && request.method === 'POST') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (token !== 'demo-token') {
+      return json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+    
     return json({ success: true, url: 'https://checkout.stripe.com/test_session_url' });
   }
 
@@ -106,9 +153,55 @@ async function handleApi(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    
+    // API routes - handled by Worker
     if (url.pathname.startsWith('/api/')) {
       return handleApi(request, env);
     }
-    return env.ASSETS.fetch(request);
+    
+    // Static assets - served by Pages
+    try {
+      // まず、リクエストされたパスで静的ファイルを探す
+      const response = await env.ASSETS.fetch(request);
+      
+      // ファイルが見つかった場合はそのまま返す
+      if (response.status !== 404) {
+        return response;
+      }
+      
+      // ファイルが見つからない場合は、SPAルーティングとしてindex.htmlを返す
+      const indexRequest = new Request(new URL('/index.html', request.url));
+      const indexResponse = await env.ASSETS.fetch(indexRequest);
+      
+      if (indexResponse.status === 200) {
+        return new Response(indexResponse.body, {
+          ...indexResponse,
+          headers: { ...indexResponse.headers, 'Content-Type': 'text/html' }
+        });
+      }
+      
+      // index.htmlも見つからない場合は404
+      return new Response('Not Found', { status: 404 });
+      
+    } catch (error) {
+      console.error('Error serving static assets:', error);
+      
+      // エラーの場合もSPAルーティングを試す
+      try {
+        const indexRequest = new Request(new URL('/index.html', request.url));
+        const indexResponse = await env.ASSETS.fetch(indexRequest);
+        
+        if (indexResponse.status === 200) {
+          return new Response(indexResponse.body, {
+            ...indexResponse,
+            headers: { ...indexResponse.headers, 'Content-Type': 'text/html' }
+          });
+        }
+      } catch (fallbackError) {
+        console.error('Fallback error:', fallbackError);
+      }
+      
+      return new Response('Internal Server Error', { status: 500 });
+    }
   }
 };
