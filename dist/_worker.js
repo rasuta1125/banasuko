@@ -107,7 +107,7 @@ async function handleApi(request, env) {
       });
     }
     
-    return json({ success: false, error: '認証が必要です' }, { status: 401 });
+    return json({ success: false, error: '認証が必要です' }, { status: 400 });
   }
 
   if (pathname === '/api/user/plan' && request.method === 'POST') {
