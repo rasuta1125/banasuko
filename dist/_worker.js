@@ -271,7 +271,7 @@ async function handleApi(request, env) {
       }
       
       // ファイルタイプチェック
-      const allowedTypes = [image/jpeg', image/jpg', image/png', image/webp'];
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!allowedTypes.includes(imageA.type) || !allowedTypes.includes(imageB.type)) {
         return json({ success: false, error: 'サポートされていないファイル形式です（JPEG, PNG, WebPのみ）' }, { status: 400 });
       }
