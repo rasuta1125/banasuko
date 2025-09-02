@@ -1,161 +1,50 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>バナスコAI - AI広告診断ツール</title>
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>バナスコAI - AI広告診断ツール</title><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true"/><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&amp;family=Noto+Sans+JP:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><link href="/static/style.css" rel="stylesheet"/><script>
+            tailwind.config = {
+              theme: {
                 extend: {
-                    colors: {
-                        'navy': {
-                            800: '#1e293b',
-                            700: '#334155'
-                        },
-                        'cyber-blue': '#00bcd4',
-                        'cyber-purple': '#9c27b0',
-                        'cyber-pink': '#e91e63',
-                        'cyber-orange': '#ff9800',
-                        'cyber-green': '#4caf50'
-                    },
-                    fontFamily: {
-                        'orbitron': ['Orbitron', 'monospace']
+                  fontFamily: {
+                    'orbitron': ['Orbitron', 'monospace'],
+                    'noto': ['Noto Sans JP', 'sans-serif']
+                  },
+                  colors: {
+                    'cyber-blue': '#00f5ff',
+                    'cyber-purple': '#8b5cf6',
+                    'cyber-pink': '#ff6b9d',
+                    'cyber-green': '#00ff88',
+                    'cyber-orange': '#ff8c00',
+                    'navy': {
+                      900: '#0a0a1f',
+                      800: '#1a1a2e',
+                      700: '#16213e',
+                      600: '#2d3561',
+                      500: '#4682b4'
                     }
+                  },
+                  animation: {
+                    'pulse-glow': 'pulse-glow 2s ease-in-out infinite alternate',
+                    'float': 'float 3s ease-in-out infinite',
+                    'slide-up': 'slide-up 0.5s ease-out',
+                    'fade-in': 'fade-in 0.3s ease-out'
+                  },
+                  keyframes: {
+                    'pulse-glow': {
+                      'from': { boxShadow: '0 0 20px rgba(0, 245, 255, 0.3)' },
+                      'to': { boxShadow: '0 0 30px rgba(0, 245, 255, 0.8)' }
+                    },
+                    'float': {
+                      '0%, 100%': { transform: 'translateY(0px)' },
+                      '50%': { transform: 'translateY(-10px)' }
+                    },
+                    'slide-up': {
+                      'from': { transform: 'translateY(20px)', opacity: '0' },
+                      'to': { transform: 'translateY(0)', opacity: '1' }
+                    },
+                    'fade-in': {
+                      'from': { opacity: '0' },
+                      'to': { opacity: '1' }
+                    }
+                  }
                 }
+              }
             }
-        }
-    </script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/style.css">
-    
-    
-    <style>
-        @keyframes slide-up {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slide-up { animation: slide-up 0.6s ease-out; }
-        
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(0, 188, 212, 0.3); }
-            50% { box-shadow: 0 0 30px rgba(0, 188, 212, 0.6); }
-        }
-        .animate-pulse-glow { animation: pulse-glow 2s infinite; }
-        
-        body { 
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            min-height: 100vh;
-        }
-    </style>
-</head>
-<body class="bg-gradient-to-br from-slate-900 to-slate-800 text-white min-h-screen">
-    
-            <!-- ナビゲーション -->
-            <nav class="fixed top-0 left-0 right-0 z-50 bg-navy-800/80 backdrop-blur-lg border-b border-gray-700/50">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex justify-between items-center h-16">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <span class="text-2xl font-orbitron font-bold bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
-                                    バナスコAI
-                                </span>
-                            </div>
-                        </div>
-                        <div class="hidden md:block">
-                            <div class="ml-10 flex items-baseline space-x-4">
-                                <a href="/" class="text-white hover:text-cyan-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">ホーム</a>
-                                <a href="/analysis" class="text-gray-300 hover:text-cyan-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">分析</a>
-                                <a href="/login" class="bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-600 hover:to-cyan-500 transition-all">ログイン</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <!-- メインコンテンツ -->
-            <main class="pt-16">
-                <!-- ヒーローセクション -->
-                <section class="relative overflow-hidden py-20">
-                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div class="text-center">
-                            <h1 class="text-4xl md:text-6xl font-orbitron font-bold mb-6 animate-slide-up">
-                                <span class="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                                    最先端banaAI Vision技術
-                                </span>
-                            </h1>
-                            <p class="text-xl md:text-2xl text-gray-300 mb-8 animate-slide-up">
-                                AI画像解析で広告バナーの効果を科学的に診断・改善提案
-                            </p>
-                            <div class="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
-                                <a href="/login" class="bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-purple-600 hover:to-cyan-500 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyan-500/25">
-                                    今すぐ始める
-                                </a>
-                                <a href="#features" class="border-2 border-gray-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:border-cyan-400 hover:text-cyan-400 transition-all duration-300">
-                                    機能を見る
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 機能セクション -->
-                <section id="features" class="py-20 bg-navy-800/30">
-                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div class="text-center mb-16">
-                            <h2 class="text-3xl md:text-4xl font-orbitron font-bold mb-4">
-                                <span class="bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
-                                    主要機能
-                                </span>
-                            </h2>
-                            <p class="text-xl text-gray-300">banaAI搭載の高精度分析ツール</p>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <!-- 機能1 -->
-                            <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50 hover:border-cyan-400/50 transition-all duration-300 transform hover:scale-105">
-                                <div class="w-16 h-16 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-2xl flex items-center justify-center mb-6 animate-pulse-glow">
-                                    <i class="fas fa-chart-line text-2xl text-white"></i>
-                                </div>
-                                <h3 class="text-xl font-bold mb-4 text-cyan-400">AI診断分析</h3>
-                                <p class="text-gray-300">最先端banaAI Vision技術による詳細な広告効果分析とスコアリング</p>
-                            </div>
-                            
-                            <!-- 機能2 -->
-                            <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50 hover:border-purple-400/50 transition-all duration-300 transform hover:scale-105">
-                                <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 animate-pulse-glow">
-                                    <i class="fas fa-balance-scale text-2xl text-white"></i>
-                                </div>
-                                <h3 class="text-xl font-bold mb-4 text-purple-400">A/B比較分析</h3>
-                                <p class="text-gray-300">2つのバナーを統計的に比較し、優劣を科学的に判定</p>
-                            </div>
-                            
-                            <!-- 機能3 -->
-                            <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50 hover:border-pink-400/50 transition-all duration-300 transform hover:scale-105">
-                                <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-500 rounded-2xl flex items-center justify-center mb-6 animate-pulse-glow">
-                                    <i class="fas fa-magic text-2xl text-white"></i>
-                                </div>
-                                <h3 class="text-xl font-bold mb-4 text-pink-400">AIコピー生成</h3>
-                                <p class="text-gray-300">効果的な広告コピーを4つのタイプで自動生成</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </main>
-            
-    
-    <!-- Custom JavaScript -->
-    <script src="/static/app.js"></script>
-    
-</body>
-</html>
+          </script><meta name="description" content="AI広告診断ツール バナスコAI - バナー広告の効果を瞬時に分析し、改善提案を行うプロフェッショナルツール"/><meta name="keywords" content="AI, 広告分析, バナー診断, マーケティング, 広告効果測定"/><meta name="author" content="バナスコAI"/><meta property="og:title" content="バナスコAI - AI広告診断ツール"/><meta property="og:description" content="AIがバナー広告を詳細分析し、効果予測と改善提案を提供"/><meta property="og:type" content="website"/><link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/></head><body class="bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 min-h-screen text-white font-noto"><div class="fixed inset-0 overflow-hidden pointer-events-none"><div class="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-cyber-blue/10 to-transparent rounded-full blur-3xl animate-pulse"></div><div class="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-cyber-purple/10 to-transparent rounded-full blur-3xl animate-pulse delay-1000"></div></div><nav class="relative z-50 bg-navy-900/80 backdrop-blur-lg border-b border-cyber-blue/20"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex items-center justify-between h-16"><div class="flex items-center"><a href="/" class="flex items-center space-x-3 group"><div class="w-10 h-10 bg-gradient-to-br from-cyber-blue to-cyber-purple rounded-lg flex items-center justify-center group-hover:animate-pulse-glow transition-all"><i class="fas fa-chart-line text-white text-xl"></i></div><div><h1 class="text-xl font-orbitron font-bold bg-gradient-to-r from-cyber-blue to-cyber-purple bg-clip-text text-transparent">バナスコAI</h1></div></a></div><div class="hidden md:block"><div class="ml-10 flex items-baseline space-x-8"><a href="/" class="nav-link text-gray-300 hover:text-cyber-blue px-3 py-2 rounded-md text-sm font-medium transition-all duration-300"><i class="fas fa-home mr-2"></i>ホーム</a><a href="/analysis" class="nav-link text-gray-300 hover:text-cyber-green px-3 py-2 rounded-md text-sm font-medium transition-all duration-300"><i class="fas fa-chart-bar mr-2"></i>AI診断</a><a href="/copy-generation" class="nav-link text-gray-300 hover:text-cyber-pink px-3 py-2 rounded-md text-sm font-medium transition-all duration-300"><i class="fas fa-magic mr-2"></i>コピー生成</a><a href="/login" class="nav-link text-gray-300 hover:text-cyber-orange px-3 py-2 rounded-md text-sm font-medium transition-all duration-300"><i class="fas fa-sign-in-alt mr-2"></i>ログイン</a></div></div><div class="md:hidden"><button id="mobile-menu-btn" class="text-gray-400 hover:text-white focus:outline-none focus:text-white"><i class="fas fa-bars text-xl"></i></button></div></div></div><div id="mobile-menu" class="hidden md:hidden bg-navy-800/95 backdrop-blur-lg border-t border-cyber-blue/20"><div class="px-2 pt-2 pb-3 space-y-1 sm:px-3"><a href="/" class="block px-3 py-2 text-base font-medium text-gray-300 hover:text-cyber-blue transition-colors"><i class="fas fa-home mr-2"></i>ホーム</a><a href="/analysis" class="block px-3 py-2 text-base font-medium text-gray-300 hover:text-cyber-green transition-colors"><i class="fas fa-chart-bar mr-2"></i>AI診断</a><a href="/copy-generation" class="block px-3 py-2 text-base font-medium text-gray-300 hover:text-cyber-pink transition-colors"><i class="fas fa-magic mr-2"></i>コピー生成</a><a href="/login" class="block px-3 py-2 text-base font-medium text-gray-300 hover:text-cyber-orange transition-colors"><i class="fas fa-sign-in-alt mr-2"></i>ログイン</a></div></div></nav><main class="relative z-10"><div class="min-h-screen"><section class="relative pt-20 pb-32 overflow-hidden"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="text-center animate-slide-up"><div class="mb-8"><h1 class="text-5xl md:text-7xl font-orbitron font-bold mb-6"><span class="bg-gradient-to-r from-cyber-blue via-cyber-purple to-cyber-pink bg-clip-text text-transparent animate-pulse-glow">AI広告診断</span><br/><span class="text-white">バナスコAI</span></h1><p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">最先端banaAI Vision技術を活用した次世代広告分析ツール<br/><span class="text-cyber-blue font-semibold">瞬時に診断、的確に改善提案</span></p></div><div class="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"><a href="/analysis" class="group relative px-8 py-4 bg-gradient-to-r from-cyber-blue to-cyber-purple rounded-full text-white font-semibold text-lg shadow-lg hover:shadow-cyber-blue/50 transition-all duration-300 transform hover:scale-105 hover:animate-pulse-glow"><i class="fas fa-chart-line mr-3"></i>AI診断を開始<div class="absolute inset-0 rounded-full bg-gradient-to-r from-cyber-blue to-cyber-purple opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div></a><a href="/copy-generation" class="group relative px-8 py-4 bg-gradient-to-r from-cyber-pink to-cyber-orange rounded-full text-white font-semibold text-lg shadow-lg hover:shadow-cyber-pink/50 transition-all duration-300 transform hover:scale-105 hover:animate-pulse-glow"><i class="fas fa-magic mr-3"></i>コピー生成<div class="absolute inset-0 rounded-full bg-gradient-to-r from-cyber-pink to-cyber-orange opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div></a></div><div class="max-w-4xl mx-auto"><div class="bg-navy-800/50 backdrop-blur-lg rounded-3xl border border-cyber-blue/20 p-8 shadow-2xl"><h3 class="text-2xl font-orbitron font-semibold text-cyber-blue mb-6"><i class="fas fa-eye mr-3"></i>プレビュー機能</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="space-y-4"><h4 class="text-lg font-semibold text-cyber-green"><i class="fas fa-chart-bar mr-2"></i>AI分析結果</h4><div class="bg-navy-700/50 rounded-xl p-4 border border-cyber-green/20"><div class="flex justify-between items-center mb-2"><span class="text-sm text-gray-400">総合スコア</span><span class="text-2xl font-bold text-cyber-green">82</span></div><div class="w-full bg-navy-600 rounded-full h-2"><div class="bg-gradient-to-r from-cyber-green to-cyber-blue h-2 rounded-full" style="width: 82%"></div></div><p class="text-xs text-cyber-green mt-2">優秀レベル</p></div></div><div class="space-y-4"><h4 class="text-lg font-semibold text-cyber-pink"><i class="fas fa-magic mr-2"></i>生成コピー例</h4><div class="bg-navy-700/50 rounded-xl p-4 border border-cyber-pink/20"><p class="text-sm text-white mb-2">&quot;美肌への近道、ここにあり。今すぐ体験してください。&quot;</p><div class="flex justify-between items-center"><span class="text-xs text-gray-400">効果予測</span><span class="text-sm font-semibold text-cyber-pink">92%</span></div></div></div></div></div></div></div></div></section><section class="py-20 bg-navy-800/30"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="text-center mb-16"><h2 class="text-4xl font-orbitron font-bold text-white mb-4">プロフェッショナル機能</h2><p class="text-xl text-gray-300 max-w-2xl mx-auto">AIが提供する高精度分析で、広告効果を最大化</p></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"><div class="group bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-cyber-blue/20 hover:border-cyber-blue/50 transition-all duration-300 hover:transform hover:scale-105 animate-float"><div class="w-16 h-16 bg-gradient-to-br from-cyber-blue to-cyber-purple rounded-2xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow"><i class="fas fa-chart-line text-2xl text-white"></i></div><h3 class="text-xl font-semibold text-white mb-4">AI広告診断</h3><p class="text-gray-400 mb-4">5つの重要指標で広告を詳細分析。瞬間伝達力、視認性、行動喚起力など、効果に直結する要素を評価。</p><ul class="text-sm text-gray-500 space-y-1"><li><i class="fas fa-check mr-2 text-cyber-blue"></i>総合スコア算出</li><li><i class="fas fa-check mr-2 text-cyber-blue"></i>項目別詳細評価</li><li><i class="fas fa-check mr-2 text-cyber-blue"></i>改善提案レポート</li></ul></div><div class="group bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-cyber-green/20 hover:border-cyber-green/50 transition-all duration-300 hover:transform hover:scale-105 animate-float delay-200"><div class="w-16 h-16 bg-gradient-to-br from-cyber-green to-cyber-blue rounded-2xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow"><i class="fas fa-balance-scale text-2xl text-white"></i></div><h3 class="text-xl font-semibold text-white mb-4">A/B比較分析</h3><p class="text-gray-400 mb-4">2つのバナーを同時比較し、統計的有意性に基づいた勝者判定。CVR改善予測も提供。</p><ul class="text-sm text-gray-500 space-y-1"><li><i class="fas fa-check mr-2 text-cyber-green"></i>勝者自動判定</li><li><i class="fas fa-check mr-2 text-cyber-green"></i>統計的有意性表示</li><li><i class="fas fa-check mr-2 text-cyber-green"></i>効果予測レポート</li></ul></div><div class="group bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-cyber-pink/20 hover:border-cyber-pink/50 transition-all duration-300 hover:transform hover:scale-105 animate-float delay-400"><div class="w-16 h-16 bg-gradient-to-br from-cyber-pink to-cyber-orange rounded-2xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow"><i class="fas fa-magic text-2xl text-white"></i></div><h3 class="text-xl font-semibold text-white mb-4">AIコピー生成</h3><p class="text-gray-400 mb-4">画像から効果的な広告コピーを自動生成。業界別最適化で、ターゲットに響くメッセージを作成。</p><ul class="text-sm text-gray-500 space-y-1"><li><i class="fas fa-check mr-2 text-cyber-pink"></i>複数バリエーション生成</li><li><i class="fas fa-check mr-2 text-cyber-pink"></i>業界別最適化</li><li><i class="fas fa-check mr-2 text-cyber-pink"></i>効果予測スコア</li></ul></div><div class="group bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-cyber-orange/20 hover:border-cyber-orange/50 transition-all duration-300 hover:transform hover:scale-105 animate-float delay-600"><div class="w-16 h-16 bg-gradient-to-br from-cyber-orange to-yellow-500 rounded-2xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow"><i class="fas fa-industry text-2xl text-white"></i></div><h3 class="text-xl font-semibold text-white mb-4">業界別最適化</h3><p class="text-gray-400 mb-4">美容、飲食、不動産など、業界特性を考慮した専門的な分析とアドバイスを提供。</p><ul class="text-sm text-gray-500 space-y-1"><li><i class="fas fa-check mr-2 text-cyber-orange"></i>業界特化分析</li><li><i class="fas fa-check mr-2 text-cyber-orange"></i>競合ベンチマーク</li><li><i class="fas fa-check mr-2 text-cyber-orange"></i>薬機法チェック</li></ul></div><div class="group bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-purple-500/20 hover:border-purple-500/50 transition-all duration-300 hover:transform hover:scale-105 animate-float delay-800"><div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow"><i class="fas fa-mobile-alt text-2xl text-white"></i></div><h3 class="text-xl font-semibold text-white mb-4">媒体別最適化</h3><p class="text-gray-400 mb-4">Instagram、GDN、YDNなど、各媒体の特性に合わせた最適化提案を実施。</p><ul class="text-sm text-gray-500 space-y-1"><li><i class="fas fa-check mr-2 text-purple-500"></i>媒体特化アドバイス</li><li><i class="fas fa-check mr-2 text-purple-500"></i>サイズ最適化</li><li><i class="fas fa-check mr-2 text-purple-500"></i>表示環境考慮</li></ul></div><div class="group bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-teal-500/20 hover:border-teal-500/50 transition-all duration-300 hover:transform hover:scale-105 animate-float delay-1000"><div class="w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center mb-6 group-hover:animate-pulse-glow"><i class="fas fa-chart-area text-2xl text-white"></i></div><h3 class="text-xl font-semibold text-white mb-4">効果予測レポート</h3><p class="text-gray-400 mb-4">クリック率、コンバージョン率、ROI改善など、具体的な数値で効果を予測。</p><ul class="text-sm text-gray-500 space-y-1"><li><i class="fas fa-check mr-2 text-teal-500"></i>CTR予測</li><li><i class="fas fa-check mr-2 text-teal-500"></i>CVR改善試算</li><li><i class="fas fa-check mr-2 text-teal-500"></i>ROI分析</li></ul></div></div></div></section><section class="py-20"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="text-center mb-16"><h2 class="text-4xl font-orbitron font-bold text-white mb-4">プロフェッショナル実績</h2><p class="text-xl text-gray-300">AIが支援する広告改善の成果</p></div><div class="grid grid-cols-1 md:grid-cols-4 gap-8"><div class="text-center group"><div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-cyber-blue/20 group-hover:border-cyber-blue/50 transition-all duration-300"><div class="text-4xl font-orbitron font-bold text-cyber-blue mb-2">92%</div><p class="text-gray-300">分析精度</p></div></div><div class="text-center group"><div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-cyber-green/20 group-hover:border-cyber-green/50 transition-all duration-300"><div class="text-4xl font-orbitron font-bold text-cyber-green mb-2">+28%</div><p class="text-gray-300">平均CVR改善</p></div></div><div class="text-center group"><div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-cyber-pink/20 group-hover:border-cyber-pink/50 transition-all duration-300"><div class="text-4xl font-orbitron font-bold text-cyber-pink mb-2">3.2秒</div><p class="text-gray-300">分析完了時間</p></div></div><div class="text-center group"><div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl p-8 border border-cyber-orange/20 group-hover:border-cyber-orange/50 transition-all duration-300"><div class="text-4xl font-orbitron font-bold text-cyber-orange mb-2">5+</div><p class="text-gray-300">対応業界</p></div></div></div></div></section><section class="py-20 bg-gradient-to-r from-navy-800/50 to-navy-700/50"><div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8"><h2 class="text-4xl font-orbitron font-bold text-white mb-6">今すぐAI診断を体験</h2><p class="text-xl text-gray-300 mb-8">デモアカウントでお試しいただけます。登録不要で即座に体験可能。</p><div class="flex flex-col sm:flex-row gap-4 justify-center items-center"><a href="/analysis" class="group relative px-10 py-4 bg-gradient-to-r from-cyber-blue to-cyber-purple rounded-full text-white font-bold text-lg shadow-2xl hover:shadow-cyber-blue/50 transition-all duration-300 transform hover:scale-110 hover:animate-pulse-glow"><i class="fas fa-rocket mr-3"></i>AI診断を開始</a><a href="/login" class="group relative px-10 py-4 bg-transparent border-2 border-cyber-blue rounded-full text-cyber-blue font-bold text-lg hover:bg-cyber-blue hover:text-white transition-all duration-300 transform hover:scale-105"><i class="fas fa-user mr-3"></i>デモログイン</a></div><div class="mt-8 text-sm text-gray-400"><p>デモアカウント: <span class="text-cyber-blue font-mono">demo</span> / <span class="text-cyber-blue font-mono">demo123</span></p></div></div></section></div></main><footer class="relative z-10 bg-navy-900/50 backdrop-blur-lg border-t border-cyber-blue/10 mt-20"><div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8"><div class="grid grid-cols-1 md:grid-cols-3 gap-8"><div><h3 class="text-lg font-orbitron font-semibold text-cyber-blue mb-4">バナスコAI</h3><p class="text-gray-400 text-sm leading-relaxed">AI技術を活用したプロフェッショナル広告分析ツール。バナー広告の効果を瞬時に診断し、データに基づいた改善提案を提供します。</p></div><div><h3 class="text-lg font-semibold text-cyber-green mb-4">機能</h3><ul class="text-gray-400 text-sm space-y-2"><li><i class="fas fa-check mr-2 text-cyber-green"></i>AI広告診断</li><li><i class="fas fa-check mr-2 text-cyber-green"></i>A/B比較分析</li><li><i class="fas fa-check mr-2 text-cyber-green"></i>コピー自動生成</li><li><i class="fas fa-check mr-2 text-cyber-green"></i>効果予測レポート</li></ul></div><div><h3 class="text-lg font-semibold text-cyber-pink mb-4">技術スタック</h3><ul class="text-gray-400 text-sm space-y-2"><li><i class="fas fa-code mr-2 text-cyber-pink"></i>Hono Framework</li><li><i class="fas fa-cloud mr-2 text-cyber-pink"></i>Cloudflare Pages</li><li><i class="fas fa-robot mr-2 text-cyber-pink"></i>最先端banaAI Vision</li><li><i class="fas fa-mobile-alt mr-2 text-cyber-pink"></i>レスポンシブデザイン</li></ul></div></div><div class="mt-8 pt-8 border-t border-gray-700 text-center"><p class="text-gray-400 text-sm">© 2024 バナスコAI. All rights reserved. | AI-Powered Banner Analysis Engine</p></div></div></footer><script src="/static/app.js"></script></body></html>
