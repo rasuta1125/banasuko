@@ -1,529 +1,311 @@
-// Firebase Authentication JavaScript統合
-// バナスコAI - ログイン・登録機能
 
-// Firebase設定
-const firebaseConfig = {
-  apiKey: "AIzaSyAflp1vqSA21sSYihZDTpje-MB1mCALxBs",
-  authDomain: "banasuko-auth.firebaseapp.com",
-  projectId: "banasuko-auth",
-  storageBucket: "banasuko-auth.firebasestorage.app",
-  messagingSenderId: "753581941845",
-  appId: "1:753581941845:web:18418afb254c309933e0dc",
-  measurementId: "G-09515RW8KC"
-};
+// バナスコAI - 統一セッション管理対応ログイン機能
 
-// グローバル変数
-let currentUser = null;
-let isAuthReady = false;
-
-// 認証状態管理
-class AuthManager {
-  constructor() {
-    this.initializeAuth();
-    this.setupEventListeners();
+// ローディング状態管理
+function setLoading(isLoading) {
+  const loginBtn = document.getElementById('loginButton');
+  const loginBtnText = document.getElementById('loginButtonText');
+  const loginSpinner = document.getElementById('loginSpinner');
+  
+  if (loginBtn) {
+    loginBtn.disabled = isLoading;
   }
-
-  // Firebase初期化
-  async initializeAuth() {
-    try {
-      console.log('Firebase Auth 初期化中...');
-      isAuthReady = true;
-      
-      // ページ読み込み時に認証状態をチェック
-      await this.checkAuthState();
-      
-      console.log('Firebase Auth 初期化完了');
-    } catch (error) {
-      console.error('Firebase Auth 初期化エラー:', error);
-      this.showError('認証システムの初期化に失敗しました');
-    }
+  
+  if (loginBtnText) {
+    loginBtnText.textContent = isLoading ? 'ログイン中...' : 'ログイン';
   }
-
-  // 認証状態チェック
-  async checkAuthState() {
-    try {
-      // クッキーからトークンを取得
-      const token = this.getCookie('auth-token');
-      
-      if (token) {
-        // トークンが存在する場合、ユーザー情報を取得
-        const response = await fetch('/api/auth/user', {
-          method: 'GET',
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            currentUser = data.user;
-            this.onAuthStateChanged(data.user);
-            return;
-          }
-        }
-      }
-      
-      // 認証されていない状態
-      this.onAuthStateChanged(null);
-    } catch (error) {
-      console.error('認証状態チェックエラー:', error);
-      this.onAuthStateChanged(null);
-    }
-  }
-
-  // 認証状態変更時の処理
-  onAuthStateChanged(user) {
-    currentUser = user;
-    
-    if (user) {
-      console.log('ユーザーがログインしています:', user.username);
-      
-      // ログイン後のリダイレクト
-      if (window.location.pathname === '/login') {
-        window.location.href = '/analysis';
-      }
-      
-      this.updateUserInfo(user);
-    } else {
-      console.log('ユーザーはログインしていません');
-      
-      // 認証が必要なページからログインページにリダイレクト
-      const protectedPages = ['/analysis', '/copy-generation', '/admin'];
-      if (protectedPages.includes(window.location.pathname)) {
-        window.location.href = '/login';
-      }
-    }
-  }
-
-  // イベントリスナー設定
-  setupEventListeners() {
-    // ログインフォーム
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-      loginForm.addEventListener('submit', this.handleLogin.bind(this));
-    }
-
-    // 登録フォーム
-    const registerForm = document.getElementById('registerFormElement');
-    if (registerForm) {
-      registerForm.addEventListener('submit', this.handleRegister.bind(this));
-    }
-
-    // デモログインボタン
-    const demoLoginBtn = document.getElementById('demoLoginButton');
-    if (demoLoginBtn) {
-      demoLoginBtn.addEventListener('click', this.handleDemoLogin.bind(this));
-    }
-
-    // フォーム切り替え
-    const showRegisterBtn = document.getElementById('showRegisterForm');
-    const showLoginBtn = document.getElementById('showLoginForm');
-    const loginFormDiv = document.querySelector('.bg-navy-800\\/50:first-child');
-    const registerFormDiv = document.getElementById('registerForm');
-
-    if (showRegisterBtn && registerFormDiv) {
-      showRegisterBtn.addEventListener('click', () => {
-        loginFormDiv.style.display = 'none';
-        registerFormDiv.classList.remove('hidden');
-      });
-    }
-
-    if (showLoginBtn && loginFormDiv) {
-      showLoginBtn.addEventListener('click', () => {
-        registerFormDiv.classList.add('hidden');
-        loginFormDiv.style.display = 'block';
-      });
-    }
-
-    // ログアウトボタン（全ページ共通）
-    document.addEventListener('click', (e) => {
-      if (e.target.matches('.logout-btn, .logout-btn *')) {
-        e.preventDefault();
-        this.handleLogout();
-      }
-    });
-  }
-
-  // ログイン処理
-  async handleLogin(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    const email = formData.get('email');
-    const password = formData.get('password');
-    
-    // デモアカウントかどうかを判定
-    const isDemo = email === 'demo@banasuko.com' && password === 'demo123';
-    
-    const loginData = {
-      email: email,
-      password: password,
-      username: isDemo ? 'demo' : email.split('@')[0] // デモログイン用またはemail prefix
-    };
-
-    this.setLoading(true, 'ログイン');
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(loginData),
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        this.showSuccess('ログインしました！');
-        currentUser = data.user;
-        
-        // ページリダイレクト
-        setTimeout(() => {
-          window.location.href = '/analysis';
-        }, 1000);
-      } else {
-        this.showError(data.error || 'ログインに失敗しました');
-      }
-    } catch (error) {
-      console.error('ログインエラー:', error);
-      this.showError('ネットワークエラーが発生しました');
-    } finally {
-      this.setLoading(false, 'ログイン');
-    }
-  }
-
-  // ユーザー登録処理
-  async handleRegister(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    const registerData = {
-      email: formData.get('email'),
-      password: formData.get('password'),
-      username: formData.get('username'),
-      displayName: formData.get('username') // usernameを表示名としても使用
-    };
-
-    // バリデーション
-    if (!registerData.email || !registerData.password || !registerData.username) {
-      this.showError('すべての項目を入力してください', 'register');
-      return;
-    }
-
-    if (registerData.password.length < 6) {
-      this.showError('パスワードは6文字以上で入力してください', 'register');
-      return;
-    }
-
-    this.setLoading(true, 'register');
-
-    try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registerData),
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        this.showSuccess('アカウントが作成されました！', 'register');
-        currentUser = data.user;
-        
-        // ページリダイレクト
-        setTimeout(() => {
-          window.location.href = '/analysis';
-        }, 1500);
-      } else {
-        this.showError(data.error || 'アカウント作成に失敗しました', 'register');
-      }
-    } catch (error) {
-      console.error('登録エラー:', error);
-      this.showError('ネットワークエラーが発生しました', 'register');
-    } finally {
-      this.setLoading(false, 'register');
-    }
-  }
-
-  // デモログイン処理
-  async handleDemoLogin(event) {
-    event.preventDefault();
-    
-    // デモアカウント情報をフォームに自動入力
-    const emailField = document.getElementById('email');
-    const passwordField = document.getElementById('password');
-    
-    if (emailField && passwordField) {
-      emailField.value = 'demo@banasuko.com';
-      passwordField.value = 'demo123';
-      
-      // 通常のログイン処理を実行
-      const loginForm = document.getElementById('loginForm');
-      if (loginForm) {
-        this.handleLogin({ 
-          preventDefault: () => {}, 
-          target: loginForm 
-        });
-        return;
-      }
-    }
-    
-    // フォールバック: 直接デモログインAPI呼び出し
-    this.setLoading(true, 'demo');
-
-    try {
-      const response = await fetch('/api/auth/demo-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        this.showSuccess('デモログインしました！');
-        currentUser = data.user;
-        
-        // ページリダイレクト
-        setTimeout(() => {
-          window.location.href = '/analysis';
-        }, 1000);
-      } else {
-        this.showError(data.error || 'デモログインに失敗しました');
-      }
-    } catch (error) {
-      console.error('デモログインエラー:', error);
-      this.showError('ネットワークエラーが発生しました');
-    } finally {
-      this.setLoading(false, 'demo');
-    }
-  }
-
-  // ログアウト処理
-  async handleLogout() {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        currentUser = null;
-        this.showSuccess('ログアウトしました');
-        
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 1000);
-      } else {
-        this.showError('ログアウトに失敗しました');
-      }
-    } catch (error) {
-      console.error('ログアウトエラー:', error);
-      this.showError('ネットワークエラーが発生しました');
-    }
-  }
-
-  // ユーザー情報更新
-  updateUserInfo(user) {
-    // ヘッダーのユーザー情報を更新
-    const userNameElements = document.querySelectorAll('.user-name');
-    const userEmailElements = document.querySelectorAll('.user-email');
-    const userPlanElements = document.querySelectorAll('.user-plan');
-
-    userNameElements.forEach(el => {
-      el.textContent = user.displayName || user.username;
-    });
-
-    userEmailElements.forEach(el => {
-      el.textContent = user.email;
-    });
-
-    userPlanElements.forEach(el => {
-      el.textContent = this.getPlanDisplayName(user.plan);
-    });
-
-    // 使用状況の更新
-    this.updateUsageInfo(user);
-  }
-
-  // 使用状況更新
-  async updateUsageInfo(user) {
-    try {
-      const response = await fetch('/api/usage/dashboard', {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          this.displayUsageStats(data.data);
-        }
-      }
-    } catch (error) {
-      console.error('使用状況取得エラー:', error);
-    }
-  }
-
-  // 使用統計表示
-  displayUsageStats(stats) {
-    const usageElements = {
-      singleAnalysis: document.querySelector('.usage-single-analysis'),
-      abComparison: document.querySelector('.usage-ab-comparison'),
-      copyGeneration: document.querySelector('.usage-copy-generation')
-    };
-
-    if (usageElements.singleAnalysis) {
-      usageElements.singleAnalysis.textContent = 
-        `${stats.currentUsage.single_analysis}/${stats.limits.single_analysis === -1 ? '無制限' : stats.limits.single_analysis}`;
-    }
-
-    if (usageElements.abComparison) {
-      usageElements.abComparison.textContent = 
-        `${stats.currentUsage.ab_comparison}/${stats.limits.ab_comparison === -1 ? '無制限' : stats.limits.ab_comparison}`;
-    }
-
-    if (usageElements.copyGeneration) {
-      usageElements.copyGeneration.textContent = 
-        `${stats.currentUsage.copy_generation}/${stats.limits.copy_generation === -1 ? '無制限' : stats.limits.copy_generation}`;
-    }
-  }
-
-  // プラン表示名取得
-  getPlanDisplayName(plan) {
-    const planNames = {
-      free: 'フリープラン',
-      basic: 'ベーシックプラン',
-      premium: 'プレミアムプラン'
-    };
-    return planNames[plan] || plan;
-  }
-
-  // ローディング状態設定
-  setLoading(isLoading, type = 'login') {
-    const loadingElements = {
-      login: {
-        button: document.getElementById('loginButton'),
-        text: document.getElementById('loginButtonText'),
-        spinner: document.getElementById('loginSpinner')
-      },
-      register: {
-        button: document.getElementById('registerButton'),
-        text: document.getElementById('registerButtonText'),
-        spinner: document.getElementById('registerSpinner')
-      },
-      demo: {
-        button: document.getElementById('demoLoginButton')
-      }
-    };
-
-    const elements = loadingElements[type];
-    if (!elements) return;
-
-    if (elements.button) {
-      elements.button.disabled = isLoading;
-    }
-
-    if (elements.text && elements.spinner) {
-      if (isLoading) {
-        elements.text.classList.add('hidden');
-        elements.spinner.classList.remove('hidden');
-      } else {
-        elements.text.classList.remove('hidden');
-        elements.spinner.classList.add('hidden');
-      }
-    }
-
-    if (type === 'demo' && elements.button) {
-      elements.button.innerHTML = isLoading 
-        ? '<i class="fas fa-spinner fa-spin mr-2"></i>デモログイン中...'
-        : '<i class="fas fa-magic mr-2"></i>デモアカウントでログイン';
-    }
-  }
-
-  // エラーメッセージ表示
-  showError(message, type = 'login') {
-    const errorElements = {
-      login: {
-        container: document.getElementById('errorMessage'),
-        text: document.getElementById('errorText')
-      },
-      register: {
-        container: document.getElementById('regErrorMessage'),
-        text: document.getElementById('regErrorText')
-      }
-    };
-
-    const elements = errorElements[type];
-    if (elements && elements.container && elements.text) {
-      elements.text.textContent = message;
-      elements.container.classList.remove('hidden');
-      
-      // 5秒後に自動で非表示
-      setTimeout(() => {
-        elements.container.classList.add('hidden');
-      }, 5000);
-    } else {
-      // フォールバック: アラート表示
-      alert('エラー: ' + message);
-    }
-  }
-
-  // 成功メッセージ表示
-  showSuccess(message, type = 'login') {
-    const successElements = {
-      login: {
-        container: document.getElementById('successMessage'),
-        text: document.getElementById('successText')
-      },
-      register: {
-        container: document.getElementById('regSuccessMessage'),
-        text: document.getElementById('regSuccessText')
-      }
-    };
-
-    const elements = successElements[type];
-    if (elements && elements.container && elements.text) {
-      elements.text.textContent = message;
-      elements.container.classList.remove('hidden');
-    } else {
-      // フォールバック: アラート表示
-      alert('成功: ' + message);
-    }
-  }
-
-  // クッキー取得
-  getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return null;
-  }
-
-  // 現在のユーザー取得
-  getCurrentUser() {
-    return currentUser;
-  }
-
-  // 認証状態確認
-  isAuthenticated() {
-    return currentUser !== null;
+  
+  if (loginSpinner) {
+    loginSpinner.style.display = isLoading ? 'inline-block' : 'none';
   }
 }
 
-// DOM読み込み完了時に初期化
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('バナスコAI 認証システム初期化開始');
-  window.authManager = new AuthManager();
+// メッセージ表示管理
+function showError(message) {
+  const errorMessage = document.getElementById('errorMessage');
+  const errorText = document.getElementById('errorText');
+  
+  if (errorMessage && errorText) {
+    errorText.textContent = message;
+    errorMessage.classList.remove('hidden');
+  }
+  
+  console.error('Login Error:', message);
+}
+
+function showSuccess(message) {
+  const successMessage = document.getElementById('successMessage');
+  const successText = document.getElementById('successText');
+  
+  if (successMessage && successText) {
+    successText.textContent = message;
+    successMessage.classList.remove('hidden');
+  }
+  
+  console.log('Login Success:', message);
+}
+
+function hideMessages() {
+  const errorMessage = document.getElementById('errorMessage');
+  const successMessage = document.getElementById('successMessage');
+  
+  if (errorMessage) {
+    errorMessage.classList.add('hidden');
+  }
+  
+  if (successMessage) {
+    successMessage.classList.add('hidden');
+  }
+}
+
+// フォーム送信処理（統一セッション管理システムを使用）
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('バナスコAI ログインシステム初期化');
+  
+  const loginForm = document.getElementById('loginForm');
+  const demoLoginBtn = document.getElementById('demoLoginBtn');
+  
+  // ログインフォーム送信処理
+  if (loginForm) {
+    loginForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      // ローディング状態
+      setLoading(true);
+      hideMessages();
+      
+      try {
+        // 統一セッション管理システムを使用
+        const result = await window.sessionManager.login(email, password);
+        
+        if (result.success) {
+          showSuccess('ログインに成功しました！ダッシュボードにリダイレクトします...');
+          // セッション管理システムが自動的にリダイレクトを処理
+        } else {
+          showError(result.error || 'ログインに失敗しました');
+        }
+      } catch (error) {
+        showError('ネットワークエラーが発生しました');
+        console.error('Login error:', error);
+      } finally {
+        setLoading(false);
+      }
+    });
+  }
+  
+  // デモログインボタン処理
+  if (demoLoginBtn) {
+    demoLoginBtn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      
+      // デモアカウント情報を自動入力
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      
+      if (emailInput && passwordInput) {
+        emailInput.value = 'demo@banasuko.com';
+        passwordInput.value = 'demo123';
+        
+        // ログインフォームを自動送信
+        if (loginForm) {
+          loginForm.dispatchEvent(new Event('submit'));
+        }
+      }
+    });
+  }
+  
+  // 新規登録リンク処理
+  const signupLink = document.getElementById('signupLink');
+  if (signupLink) {
+    signupLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // 新規登録モーダルを表示
+      showSignupModal();
+    });
+  }
+  
+  console.log('バナスコAI ログインシステム初期化完了');
 });
 
-// グローバル関数として公開
-window.getCurrentUser = () => window.authManager?.getCurrentUser();
-window.isAuthenticated = () => window.authManager?.isAuthenticated();
+// 新規登録モーダル表示
+function showSignupModal() {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  modal.innerHTML = `
+    <div class="bg-navy-800/90 backdrop-blur-lg rounded-3xl border border-cyber-blue/20 p-8 shadow-2xl w-full max-w-md mx-4">
+      <div class="text-center mb-6">
+        <h2 class="text-2xl font-orbitron font-bold text-white mb-2">新規登録</h2>
+        <p class="text-gray-400">新しいアカウントを作成</p>
+      </div>
+      
+      <form id="signupForm" class="space-y-4">
+        <div>
+          <label for="signupEmail" class="block text-sm font-medium text-gray-300 mb-2">
+            <i class="fas fa-envelope mr-2 text-cyber-blue"></i>メールアドレス
+          </label>
+          <input type="email" id="signupEmail" required placeholder="example@email.com" 
+                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/20 transition-all">
+        </div>
+        <div>
+          <label for="signupPassword" class="block text-sm font-medium text-gray-300 mb-2">
+            <i class="fas fa-lock mr-2 text-cyber-blue"></i>パスワード
+          </label>
+          <input type="password" id="signupPassword" required placeholder="6文字以上" 
+                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/20 transition-all">
+        </div>
+        <div>
+          <label for="signupPasswordConfirm" class="block text-sm font-medium text-gray-300 mb-2">
+            <i class="fas fa-lock mr-2 text-cyber-blue"></i>パスワード確認
+          </label>
+          <input type="password" id="signupPasswordConfirm" required placeholder="パスワードを再入力" 
+                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/20 transition-all">
+        </div>
+        
+        <div id="signupError" class="bg-red-500/20 border border-red-500/30 rounded-xl p-3 hidden">
+          <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
+            <span id="signupErrorText" class="text-red-300 text-sm"></span>
+          </div>
+        </div>
+        
+        <div id="signupSuccess" class="bg-green-500/20 border border-green-500/30 rounded-xl p-3 hidden">
+          <div class="flex items-center">
+            <i class="fas fa-check-circle text-green-400 mr-2"></i>
+            <span id="signupSuccessText" class="text-green-300 text-sm"></span>
+          </div>
+        </div>
+        
+        <div class="flex space-x-3">
+          <button type="submit" id="signupButton" 
+                  class="flex-1 bg-gradient-to-r from-cyber-blue to-cyber-purple text-white py-3 px-6 rounded-xl font-semibold hover:from-cyber-purple hover:to-cyber-blue transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyber-blue/25">
+            <span id="signupButtonText">登録</span>
+            <div id="signupSpinner" class="hidden">
+              <i class="fas fa-spinner fa-spin"></i>
+            </div>
+          </button>
+          <button type="button" id="cancelSignup" 
+                  class="px-6 py-3 bg-gray-600 text-white rounded-xl font-semibold hover:bg-gray-700 transition-all">
+            キャンセル
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // フォーム送信処理
+  const signupForm = document.getElementById('signupForm');
+  const cancelBtn = document.getElementById('cancelSignup');
+  
+  signupForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('signupEmail').value;
+    const password = document.getElementById('signupPassword').value;
+    const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+    
+    // バリデーション
+    if (password !== passwordConfirm) {
+      showSignupError('パスワードが一致しません');
+      return;
+    }
+    
+    if (password.length < 6) {
+      showSignupError('パスワードは6文字以上で入力してください');
+      return;
+    }
+    
+    // ローディング状態
+    setSignupLoading(true);
+    hideSignupMessages();
+    
+    try {
+      // 統一セッション管理システムを使用
+      const result = await window.sessionManager.register(email, password);
+      
+      if (result.success) {
+        showSignupSuccess('アカウントを作成しました！ダッシュボードにリダイレクトします...');
+        // セッション管理システムが自動的にリダイレクトを処理
+      } else {
+        showSignupError(result.error || 'アカウント作成に失敗しました');
+      }
+    } catch (error) {
+      showSignupError('ネットワークエラーが発生しました');
+      console.error('Signup error:', error);
+    } finally {
+      setSignupLoading(false);
+    }
+  });
+  
+  // キャンセルボタン
+  cancelBtn.addEventListener('click', function() {
+    document.body.removeChild(modal);
+  });
+  
+  // モーダル外クリックで閉じる
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+}
+
+// 新規登録用のヘルパー関数
+function setSignupLoading(isLoading) {
+  const signupBtn = document.getElementById('signupButton');
+  const signupBtnText = document.getElementById('signupButtonText');
+  const signupSpinner = document.getElementById('signupSpinner');
+  
+  if (signupBtn) {
+    signupBtn.disabled = isLoading;
+  }
+  
+  if (signupBtnText) {
+    signupBtnText.textContent = isLoading ? '登録中...' : '登録';
+  }
+  
+  if (signupSpinner) {
+    signupSpinner.style.display = isLoading ? 'inline-block' : 'none';
+  }
+}
+
+function showSignupError(message) {
+  const errorEl = document.getElementById('signupError');
+  const errorText = document.getElementById('signupErrorText');
+  
+  if (errorEl && errorText) {
+    errorText.textContent = message;
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function showSignupSuccess(message) {
+  const successEl = document.getElementById('signupSuccess');
+  const successText = document.getElementById('signupSuccessText');
+  
+  if (successEl && successText) {
+    successText.textContent = message;
+    successEl.classList.remove('hidden');
+  }
+}
+
+function hideSignupMessages() {
+  const errorEl = document.getElementById('signupError');
+  const successEl = document.getElementById('signupSuccess');
+  
+  if (errorEl) errorEl.classList.add('hidden');
+  if (successEl) successEl.classList.add('hidden');
+}
+
+// ログアウト機能（ダッシュボード用）
+function logout() {
+  window.sessionManager.logout();
+}
+
+// グローバルに公開
+window.logout = logout;
