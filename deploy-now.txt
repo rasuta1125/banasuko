@@ -1,4 +1,0 @@
-=== FINAL DEPLOYMENT TRIGGER ===
-Date: Sun Aug 24 03:20:50 UTC 2025
-Authentication fixes ready for production
-Resolves: GPT-identified 404 and JSON errors
