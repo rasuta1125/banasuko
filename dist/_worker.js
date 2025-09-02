@@ -56,6 +56,51 @@ async function handleApi(request, env) {
     }
   }
 
+  // 新規ユーザー登録
+  if (pathname === '/api/auth/register' && request.method === 'POST') {
+    try {
+      const body = await request.json();
+      const { email, password } = body;
+      
+      // 基本的なバリデーション
+      if (!email || !password) {
+        return json({ success: false, error: 'メールアドレスとパスワードは必須です' }, { status: 400 });
+      }
+      
+      if (password.length < 6) {
+        return json({ success: false, error: 'パスワードは6文字以上である必要があります' }, { status: 400 });
+      }
+      
+      // デモ用の新規登録処理（後でFirebaseに置換）
+      if (email === 'demo@banasuko.com') {
+        return json({ success: false, error: 'このメールアドレスは既に使用されています' }, { status: 409 });
+      }
+      
+      // 新規ユーザー作成成功
+      const newUser = {
+        uid: `user-${Date.now()}`,
+        email: email,
+        plan: 'free',
+        createdAt: new Date().toISOString()
+      };
+      
+      return json(
+        { 
+          success: true, 
+          user: newUser,
+          message: 'アカウントが正常に作成されました'
+        },
+        { 
+          status: 201,
+          headers: { 'Set-Cookie': makeAuthCookie(`user-${Date.now()}-token`) }
+        }
+      );
+      
+    } catch (error) {
+      return json({ success: false, error: 'リクエストの解析に失敗しました' }, { status: 400 });
+    }
+  }
+
   if (pathname === '/api/auth/logout' && request.method === 'POST') {
     return json(
       { success: true },
@@ -69,7 +114,7 @@ async function handleApi(request, env) {
   if (pathname === '/api/auth/user' && request.method === 'GET') {
     const token = readCookie(request, COOKIE_NAME);
     
-    if (token === 'demo-token') {
+    if (token && (token === 'demo-token' || token.startsWith('user-'))) {
       return json({ 
         success: true, 
         user: { uid: 'demo-user-id', email: 'demo@banasuko.com', plan: 'free' } 
@@ -83,7 +128,7 @@ async function handleApi(request, env) {
   if (pathname === '/api/user/profile' && request.method === 'GET') {
     const token = readCookie(request, COOKIE_NAME);
     
-    if (token === 'demo-token') {
+    if (token && (token === 'demo-token' || token.startsWith('user-'))) {
       return json({ 
         success: true, 
         user: { uid: 'demo-user-id', email: 'demo@banasuko.com', plan: 'free' } 
@@ -96,7 +141,7 @@ async function handleApi(request, env) {
   if (pathname === '/api/usage/dashboard' && request.method === 'GET') {
     const token = readCookie(request, COOKIE_NAME);
     
-    if (token === 'demo-token') {
+    if (token && (token === 'demo-token' || token.startsWith('user-'))) {
       return json({ 
         success: true, 
         usage: { 
@@ -113,7 +158,7 @@ async function handleApi(request, env) {
   if (pathname === '/api/user/plan' && request.method === 'POST') {
     const token = readCookie(request, COOKIE_NAME);
     
-    if (token !== 'demo-token') {
+    if (!token || (token !== 'demo-token' && !token.startsWith('user-'))) {
       return json({ success: false, error: '認証が必要です' }, { status: 401 });
     }
     
@@ -135,7 +180,7 @@ async function handleApi(request, env) {
   if (pathname === '/api/billing/checkout' && request.method === 'POST') {
     const token = readCookie(request, COOKIE_NAME);
     
-    if (token !== 'demo-token') {
+    if (!token || (token !== 'demo-token' && !token.startsWith('user-'))) {
       return json({ success: false, error: '認証が必要です' }, { status: 401 });
     }
     
@@ -146,7 +191,7 @@ async function handleApi(request, env) {
   if (pathname === '/api/analysis/single' && request.method === 'POST') {
     const token = readCookie(request, COOKIE_NAME);
     
-    if (token !== 'demo-token') {
+    if (!token || (token !== 'demo-token' && !token.startsWith('user-'))) {
       return json({ success: false, error: '認証が必要です' }, { status: 401 });
     }
     
@@ -206,7 +251,7 @@ async function handleApi(request, env) {
       
     } catch (error) {
       console.error('Image analysis error:', error);
-      return json({ success: false, error: '画像分析中にエラーが発生しました' }, { status: 500 });
+      return json({ success: false, error: '画像分析中にエラーが発生しました' }, { status: 400 });
     }
   }
 
@@ -254,7 +299,7 @@ export default {
       }
       
       // それでも見つからない場合は404
-      return new Response('Not Found', { status: 404 });
+      return new Response('Not Found', { status: 400 });
       
     } catch (error) {
       console.error('Error serving static assets:', error);
