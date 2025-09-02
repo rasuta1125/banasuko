@@ -142,74 +142,6 @@ async function handleApi(request, env) {
     return json({ success: true, url: 'https://checkout.stripe.com/test_session_url' });
   }
 
-  // 画像分析機能
-  if (pathname === '/api/analysis/single' && request.method === 'POST') {
-    const token = readCookie(request, COOKIE_NAME);
-    
-    if (token !== 'demo-token') {
-      return json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
-    
-    try {
-      const formData = await request.formData();
-      const imageFile = formData.get('image');
-      
-      if (!imageFile) {
-        return json({ success: false, error: '画像ファイルが提供されていません' }, { status: 400 });
-      }
-      
-      // ファイルサイズチェック（5MB制限）
-      if (imageFile.size > 5 * 1024 * 1024) {
-        return json({ success: false, error: '画像ファイルが大きすぎます（5MB以下にしてください）' }, { status: 400 });
-      }
-      
-      // ファイルタイプチェック
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(imageFile.type)) {
-        return json({ success: false, error: 'サポートされていないファイル形式です（JPEG, PNG, WebPのみ）' }, { status: 400 });
-      }
-      
-      // デモ用の画像分析結果（後でOpenAI Vision APIに置換）
-      const analysisResult = {
-        success: true,
-        data: {
-          analysis: {
-            visual_elements: [
-              "青い背景色",
-              "白いテキスト",
-              "中央配置されたロゴ",
-              "シンプルなデザイン"
-            ],
-            copy_suggestions: [
-              "「信頼性」を強調するコピー",
-              "「シンプルさ」をアピールするメッセージ",
-              "「専門性」を示す表現"
-            ],
-            improvement_tips: [
-              "コントラストをより強くする",
-              "行動喚起ボタンを追加する",
-              "ブランドカラーを統一する"
-            ],
-            target_audience: "ビジネスパーソン、30-50代",
-            effectiveness_score: 7.5
-          },
-          image_info: {
-            filename: imageFile.name,
-            size: imageFile.size,
-            type: imageFile.type,
-            dimensions: "800x600"
-          }
-        }
-      };
-      
-      return json(analysisResult);
-      
-    } catch (error) {
-      console.error('Image analysis error:', error);
-      return json({ success: false, error: '画像分析中にエラーが発生しました' }, { status: 500 });
-    }
-  }
-
   // Webhook（署名検証は後で実装）
   if (pathname === '/api/stripe/webhook' && request.method === 'POST') {
     return new Response(null, { status: 204 });
@@ -250,7 +182,7 @@ export default {
             ...response,
             headers: { ...response.headers, 'Content-Type': 'text/html' }
           });
-        }
+          }
       }
       
       // それでも見つからない場合は404
