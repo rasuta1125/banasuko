@@ -19,6 +19,7 @@ import { CopyGenerationPage } from './components/CopyGenerationPage'
 import { AdminDashboard } from './components/AdminDashboard'
 import { UserDashboard } from './components/UserDashboard'
 import { PlanManagement } from './components/PlanManagement'
+import { ScoringPage } from './components/ScoringPage'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -448,6 +449,82 @@ function generateComparison(resultA: any, resultB: any) {
   }
 }
 
+// 採点API エンドポイント
+app.post('/api/scoring/submit-answer', async (c) => {
+  try {
+    const { questionId, answer, timeSpent } = await c.req.json()
+    
+    // サンプル採点ロジック
+    const correctAnswers = {
+      '1': 3, // "すべて正しい"
+      '2': null // エッセイ問題は手動採点
+    }
+    
+    const isCorrect = correctAnswers[questionId as keyof typeof correctAnswers] === answer
+    const score = isCorrect ? 10 : 0
+    
+    return c.json({
+      success: true,
+      result: {
+        questionId,
+        isCorrect,
+        score,
+        feedback: isCorrect ? '正解です！' : '不正解です。正解は「すべて正しい」です。',
+        correctAnswer: correctAnswers[questionId as keyof typeof correctAnswers],
+        timeSpent
+      }
+    })
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: '採点処理でエラーが発生しました'
+    }, 500)
+  }
+})
+
+app.get('/api/scoring/test-data', async (c) => {
+  const testItems = [
+    {
+      id: '1',
+      type: 'multiple_choice',
+      question: 'JavaScriptにおいて、変数を宣言するためのキーワードとして正しいものはどれですか？',
+      options: ['var', 'let', 'const', 'すべて正しい'],
+      correctAnswer: 3,
+      maxPoints: 10,
+      category: 'プログラミング基礎',
+      difficulty: 'easy',
+      timeLimit: 300
+    },
+    {
+      id: '2',
+      type: 'multiple_choice', 
+      question: 'CSSでFlexboxのコンテナに設定する基本プロパティはどれですか？',
+      options: ['display: flex', 'flex-direction: row', 'justify-content: center', 'align-items: center'],
+      correctAnswer: 0,
+      maxPoints: 10,
+      category: 'ウェブデザイン',
+      difficulty: 'easy',
+      timeLimit: 300
+    },
+    {
+      id: '3',
+      type: 'essay',
+      question: 'レスポンシブデザインとは何か、その重要性とメリットについて説明してください。',
+      maxPoints: 20,
+      category: 'ウェブデザイン理論',
+      difficulty: 'medium',
+      timeLimit: 600
+    }
+  ]
+  
+  return c.json({
+    success: true,
+    testItems,
+    totalQuestions: testItems.length,
+    maxScore: testItems.reduce((sum, item) => sum + item.maxPoints, 0)
+  })
+})
+
 // API ステータスエンドポイント
 app.get('/api/status', async (c) => {
   const k = c.env.OPENAI_API_KEY
@@ -500,6 +577,39 @@ app.get('/dashboard', (c) => {
 
 app.get('/plan', (c) => {
   return c.render(<PlanManagement />)
+})
+
+app.get('/scoring', (c) => {
+  // サンプルテストデータ
+  const sampleTestItems = [
+    {
+      id: '1',
+      type: 'multiple_choice' as const,
+      question: 'JavaScriptにおいて、変数を宣言するためのキーワードとして正しいものはどれですか？',
+      options: ['var', 'let', 'const', 'すべて正しい'],
+      correctAnswer: 3,
+      maxPoints: 10,
+      category: 'プログラミング基礎',
+      difficulty: 'easy' as const,
+      timeLimit: 300
+    },
+    {
+      id: '2', 
+      type: 'essay' as const,
+      question: 'オブジェクト指向プログラミングの3つの基本原則について説明してください。',
+      maxPoints: 20,
+      category: 'プログラミング理論',
+      difficulty: 'medium' as const,
+      timeLimit: 600
+    }
+  ]
+  
+  return c.render(<ScoringPage 
+    testItems={sampleTestItems}
+    currentItem={sampleTestItems[0]}
+    score={0}
+    maxScore={100}
+  />)
 })
 
 // 404ハンドリング
