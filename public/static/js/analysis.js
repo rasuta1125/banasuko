@@ -1,367 +1,282 @@
-// /static/js/analysis.js - 既存システムを保持したUI拡張版
+// 古いzipのUIに対応した分析ページ JavaScript
 (function () {
-  const $ = (s) => document.querySelector(s);
-  const show = (el) => el.classList.remove('hidden');
-  const hide = (el) => el.classList.add('hidden');
-
-  // 既存の要素（既存システム保持）
-  const abMode = $('#abMode');
-  const singleUploader = $('#singleUploader');
-  const abUploader = $('#abUploader');
-  const analyzeBtn = $('#analyzeBtn');
-  const state = $('#state');
-  const errorBox = $('#error');
-  const results = $('#resultsSection');
-
-  // 既存の結果DOM（既存システム保持）
-  const totalScore = $('#totalScore');
-  const scoreLevel = $('#scoreLevel');
-  const strengthsList = $('#strengthsList');
-  const improvementsList = $('#improvementsList');
-  const reasoning = $('#reasoning');
-  const abResults = $('#abResults');
-  const winnerBadge = $('#winnerBadge');
-  const scoreA = $('#scoreA'); const scoreB = $('#scoreB');
-  const whyA = $('#whyA'); const whyB = $('#whyB');
-
-  // 新規追加要素
-  let currentUser = null;
-  let selectedPlatform = '';
-  let scoringType = 'score';
-
-  // 既存のプレビュー機能（既存システム保持）
-  function bindPreview(input, preview) {
-    input?.addEventListener('change', () => {
-      const f = input.files?.[0];
-      preview.innerHTML = '';
-      if (!f) return;
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(f);
-      img.className = 'rounded-md border border-cyber-purple/40 max-h-60';
-      preview.appendChild(img);
-    });
-  }
-
-  bindPreview($('#singleInput'), $('#singlePreview'));
-  bindPreview($('#aInput'), $('#aPreview'));
-  bindPreview($('#bInput'), $('#bPreview'));
-
-  // 既存のA/B 切替（既存システム保持）
-  abMode?.addEventListener('change', () => {
-    if (abMode.checked) { hide(singleUploader); show(abUploader); }
-    else { show(singleUploader); hide(abUploader); }
-  });
-
-  // 新規追加: 媒体変更処理
-  window.handlePlatformChange = function(platform) {
-    selectedPlatform = platform;
-    const instagramAdType = $('#instagramAdType');
+  // カテゴリオプションの更新
+  window.updateCategoryOptions = function() {
+    const platform = document.getElementById('platform').value;
+    const category = document.getElementById('category');
     
-    if (platform === 'instagram-ad') {
-      show(instagramAdType);
-      scoringType = 'grade';
-    } else {
-      hide(instagramAdType);
-      
-      if (platform === 'instagram-post') {
-        scoringType = 'score';
-      } else if (platform === 'gdn' || platform === 'yahoo') {
-        scoringType = 'grade';
-      }
-    }
+    // 既存のオプションをクリア
+    category.innerHTML = '<option value="">選択してください</option>';
     
-    updateScoringTypeDisplay();
-    console.log(`媒体変更: ${platform}, スコアタイプ: ${scoringType}`);
-  };
-
-  // 新規追加: スコアタイプ表示更新
-  function updateScoringTypeDisplay() {
-    const scoringInfo = $('#scoringTypeInfo');
-    if (!scoringInfo) return;
-
-    let infoText = '';
-    let colorClass = '';
-
-    switch (selectedPlatform) {
-      case 'instagram-post':
-        infoText = '📊 Instagram投稿：100点満点で採点';
-        colorClass = 'text-cyber-blue';
-        break;
-      case 'instagram-ad':
-        infoText = '🎯 Instagram広告：A/B/C評価で判定';
-        colorClass = 'text-cyber-pink';
-        break;
-      case 'gdn':
-        infoText = '🎯 Googleディスプレイ広告：A/B/C評価で判定';
-        colorClass = 'text-cyber-green';
-        break;
-      case 'yahoo':
-        infoText = '🎯 Yahooディスプレイ広告：A/B/C評価で判定';
-        colorClass = 'text-cyber-orange';
-        break;
-      default:
-        infoText = '📋 媒体を選択してください';
-        colorClass = 'text-gray-400';
-    }
-
-    scoringInfo.innerHTML = `<p class="${colorClass} text-sm font-medium">${infoText}</p>`;
-  }
-
-  // 新規追加: 分析タイプ切り替え
-  window.switchAnalysisType = function(type) {
-    const singleUpload = $('#singleUpload');
-    const abUpload = $('#abUpload');
-    const singleBtn = $('#singleBtn');
-    const abBtn = $('#abBtn');
-
-    if (type === 'single') {
-      show(singleUpload);
-      hide(abUpload);
-      singleBtn?.classList.add('bg-cyber-purple', 'text-white');
-      singleBtn?.classList.remove('bg-gray-700', 'text-gray-300');
-      abBtn?.classList.add('bg-gray-700', 'text-gray-300');
-      abBtn?.classList.remove('bg-cyber-green', 'text-white');
-    } else if (type === 'ab') {
-      hide(singleUpload);
-      show(abUpload);
-      abBtn?.classList.add('bg-cyber-green', 'text-white');
-      abBtn?.classList.remove('bg-gray-700', 'text-gray-300');
-      singleBtn?.classList.add('bg-gray-700', 'text-gray-300');
-      singleBtn?.classList.remove('bg-cyber-purple', 'text-white');
+    if (platform === 'Instagram') {
+      category.innerHTML += `
+        <option value="広告">広告</option>
+        <option value="投稿">投稿</option>
+      `;
+    } else if (platform === 'GDN' || platform === 'YDN') {
+      category.innerHTML += `
+        <option value="広告">広告</option>
+      `;
     }
   };
 
-  // 新規追加: ドラッグ&ドロップ設定
-  function setupDragAndDrop() {
-    // シングル分析用
-    setupSingleDragAndDrop();
-    // A/B分析用
-    setupABDragAndDrop();
-  }
+  // ファイルアップロード処理
+  window.handleFileUpload = function(input, pattern) {
+    const file = input.files[0];
+    if (!file) return;
 
-  function setupSingleDragAndDrop() {
-    const dropZone = $('#dropZone');
-    const fileInput = $('#imageUpload');
-
-    if (dropZone && fileInput) {
-      dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('border-cyber-purple');
-      });
-
-      dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('border-cyber-purple');
-      });
-
-      dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('border-cyber-purple');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-          handleImageUpload(files[0], 'single');
-        }
-      });
-
-      dropZone.addEventListener('click', () => {
-        fileInput.click();
-      });
-
-      fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          handleImageUpload(e.target.files[0], 'single');
-        }
-      });
-    }
-  }
-
-  function setupABDragAndDrop() {
-    setupABSingleDragAndDrop('A');
-    setupABSingleDragAndDrop('B');
-  }
-
-  function setupABSingleDragAndDrop(pattern) {
-    const dropZone = $(`#dropZone${pattern}`);
-    const fileInput = $(`#imageUpload${pattern}`);
-
-    if (dropZone && fileInput) {
-      const colorClass = pattern === 'A' ? 'border-cyber-blue' : 'border-cyber-pink';
-      
-      dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add(colorClass);
-      });
-
-      dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove(colorClass);
-      });
-
-      dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove(colorClass);
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-          handleImageUpload(files[0], `ab${pattern}`);
-        }
-      });
-
-      fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          handleImageUpload(e.target.files[0], `ab${pattern}`);
-        }
-      });
-    }
-  }
-
-  // 新規追加: 画像アップロード処理
-  async function handleImageUpload(file, type) {
+    // ファイルサイズチェック（10MB以下）
     if (file.size > 10 * 1024 * 1024) {
       showError('ファイルサイズは10MB以下にしてください');
       return;
     }
 
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    // ファイル形式チェック
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
-      showError('PNG, JPG, JPEG, WEBP形式のファイルをアップロードしてください');
+      showError('PNG, JPG, JPEG形式のファイルをアップロードしてください');
       return;
     }
 
-    try {
-      await showImagePreview(file, type);
-      console.log(`画像アップロード成功: ${type}`, file.name);
-    } catch (error) {
-      console.error('画像アップロードエラー:', error);
-      showError('画像のアップロードに失敗しました');
-    }
+    // プレビュー表示
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const previewId = pattern === 'A' ? 'previewA' : 'previewB';
+      const imageId = pattern === 'A' ? 'imageA' : 'imageB';
+      
+      document.getElementById(previewId).classList.remove('hidden');
+      document.getElementById(imageId).src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ドラッグ&ドロップ設定
+  function setupDragAndDrop() {
+    const uploadAreaA = document.getElementById('uploadAreaA');
+    const uploadAreaB = document.getElementById('uploadAreaB');
+    const fileUploadA = document.getElementById('fileUploadA');
+    const fileUploadB = document.getElementById('fileUploadB');
+
+    // Aパターン
+    setupDragAndDropForArea(uploadAreaA, fileUploadA, 'A');
+    // Bパターン
+    setupDragAndDropForArea(uploadAreaB, fileUploadB, 'B');
   }
 
-  // 新規追加: 画像プレビュー表示
-  async function showImagePreview(file, type) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        let previewContainer, previewImage, imageName;
-        
-        switch (type) {
-          case 'single':
-            previewContainer = $('#imagePreview');
-            previewImage = $('#previewImage');
-            imageName = $('#imageName');
-            break;
-          case 'abA':
-            previewContainer = $('#imagePreviewA');
-            previewImage = $('#previewImageA');
-            break;
-          case 'abB':
-            previewContainer = $('#imagePreviewB');
-            previewImage = $('#previewImageB');
-            break;
-          default:
-            reject(new Error('不正なアップロードタイプ'));
-            return;
-        }
+  function setupDragAndDropForArea(uploadArea, fileInput, pattern) {
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
 
-        if (previewContainer && previewImage) {
-          previewImage.src = e.target.result;
-          show(previewContainer);
-          
-          if (imageName) {
-            imageName.textContent = file.name;
-          }
-        }
-        
-        resolve();
-      };
+    uploadArea.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
       
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        handleFileUpload(fileInput, pattern);
+      }
     });
   }
 
-  // 既存の関数（既存システム保持）
-  function listify(ul, items) {
-    ul.innerHTML = '';
-    if (!Array.isArray(items)) return;
-    for (const t of items) {
-      const li = document.createElement('li');
-      li.textContent = typeof t === 'string' ? t : JSON.stringify(t);
-      ul.appendChild(li);
+  // AI診断実行
+  window.runAIAnalysis = async function() {
+    const fileA = document.getElementById('fileUploadA').files[0];
+    const fileB = document.getElementById('fileUploadB').files[0];
+    
+    if (!fileA || !fileB) {
+      showError('AパターンとBパターンの両方の画像をアップロードしてください');
+      return;
     }
-  }
-  
-  const showError = (msg) => { errorBox.textContent = msg; errorBox.classList.remove('hidden'); };
-  const clearError = () => errorBox.classList.add('hidden');
 
-  async function postForm(url, fd) {
-    const res = await fetch(url, { method: 'POST', credentials: 'include', body: fd });
-    if (!res.ok) throw new Error(`${url} failed: ${res.status}`);
-    return res.json();
-  }
+    // 必須項目チェック
+    const requiredFields = ['userName', 'ageGroup', 'platform', 'category', 'adBudget', 'purpose', 'industry', 'genre', 'bannerName'];
+    for (const fieldId of requiredFields) {
+      const field = document.getElementById(fieldId);
+      if (!field.value) {
+        showError(`${field.previousElementSibling.textContent}を入力してください`);
+        return;
+      }
+    }
 
-  // 既存の分析実行（既存システム保持）
-  analyzeBtn?.addEventListener('click', async () => {
-    clearError(); hide(results); hide(abResults);
-    analyzeBtn.disabled = true;
-    state.textContent = '解析中…';
-
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const status = document.getElementById('analysisStatus');
+    
     try {
-      const fd = new FormData();
-      fd.append('displayName', $('#displayName')?.value || '');
-      fd.append('targetAge', $('#targetAge')?.value || '');
-      fd.append('channel', $('#channel')?.value || '');
+      analyzeBtn.disabled = true;
+      status.classList.remove('hidden');
+      status.textContent = 'AI診断実行中...';
 
-      if (abMode?.checked) {
-        const fa = $('#aInput')?.files?.[0];
-        const fb = $('#bInput')?.files?.[0];
-        if (!fa || !fb) throw new Error('A/B それぞれの画像を選択してください');
-        if (fa.size > 5 * 1024 * 1024 || fb.size > 5 * 1024 * 1024) throw new Error('画像は5MB以下にしてください');
-        fd.append('imageA', fa); fd.append('imageB', fb);
+      // フォームデータの準備
+      const formData = new FormData();
+      formData.append('imageA', fileA);
+      formData.append('imageB', fileB);
+      
+      // 基本情報
+      formData.append('userName', document.getElementById('userName').value);
+      formData.append('ageGroup', document.getElementById('ageGroup').value);
+      formData.append('platform', document.getElementById('platform').value);
+      formData.append('category', document.getElementById('category').value);
+      formData.append('adBudget', document.getElementById('adBudget').value);
+      formData.append('purpose', document.getElementById('purpose').value);
+      
+      // 詳細設定
+      formData.append('industry', document.getElementById('industry').value);
+      formData.append('genre', document.getElementById('genre').value);
+      formData.append('scoreFormat', document.querySelector('input[name="scoreFormat"]:checked').value);
+      formData.append('bannerName', document.getElementById('bannerName').value);
+      
+      // 任意項目
+      formData.append('aiResult', document.getElementById('aiResult').value);
+      formData.append('followerGain', document.getElementById('followerGain').value);
+      formData.append('memo', document.getElementById('memo').value);
 
-        const data = await postForm('/api/analysis/compare', fd);
-        scoreA.textContent = data?.scores?.A ?? '—';
-        scoreB.textContent = data?.scores?.B ?? '—';
-        whyA.textContent = data?.reasons?.A || '';
-        whyB.textContent = data?.reasons?.B || '';
-        winnerBadge.textContent = data?.winner || '—';
-        show(abResults);
+      // API呼び出し
+      const response = await fetch('/api/analysis/compare', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
 
-      } else {
-        const f = $('#singleInput')?.files?.[0];
-        if (!f) throw new Error('画像を選択してください');
-        if (f.size > 5 * 1024 * 1024) throw new Error('画像は5MB以下にしてください');
-        fd.append('image', f);
-
-        const data = await postForm('/api/analysis/single', fd);
-        const s = data.score ?? data.totalScore ?? data.result?.score;
-        totalScore.textContent = s ?? '—';
-        scoreLevel.textContent = data.level ? `評価: ${data.level}` : '';
-        listify(strengthsList, data.strengths ?? data.positives ?? []);
-        listify(improvementsList, data.improvements ?? data.suggestions ?? []);
-        reasoning.textContent = data.reasoning ?? data.summary ?? '';
+      if (!response.ok) {
+        throw new Error(`分析に失敗しました (${response.status})`);
       }
 
-      show(results);
-      state.textContent = '完了';
+      const result = await response.json();
+      
+      // 結果表示
+      displayAnalysisResults(result);
+      
+      // 成功メッセージ
+      showSuccess('AI診断が完了しました！');
+      
+      // 利用回数更新
+      updateUsageInfo();
 
-      // 残回数の同期（既存機能保持）
-      try { await fetch('/api/usage/dashboard', { credentials: 'include' }); } catch {}
-
-    } catch (e) {
-      showError(e.message || '処理に失敗しました');
-      state.textContent = '失敗';
+    } catch (error) {
+      console.error('AI診断エラー:', error);
+      showError(error.message || 'AI診断中にエラーが発生しました');
     } finally {
       analyzeBtn.disabled = false;
+      status.classList.add('hidden');
     }
-  });
+  };
+
+  // 分析結果表示
+  function displayAnalysisResults(result) {
+    const resultsArea = document.getElementById('analysisResults');
+    
+    const resultsHTML = `
+      <div class="cyber-card p-6">
+        <h2 class="section-title">📊 AI診断結果</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <!-- Aパターン結果 -->
+          <div class="analysis-section">
+            <h3 class="text-lg font-semibold text-cyber-blue mb-3">Aパターン</h3>
+            <div class="score-display">
+              <span>${result.scores?.A || '—'}</span>
+              <div class="text-sm text-gray-400">
+                ${result.scores?.A >= 80 ? '優秀' : result.scores?.A >= 60 ? '良好' : '要改善'}
+              </div>
+            </div>
+            <div class="text-sm text-gray-300">
+              ${result.reasons?.A || '分析結果がありません'}
+            </div>
+          </div>
+          
+          <!-- Bパターン結果 -->
+          <div class="analysis-section">
+            <h3 class="text-lg font-semibold text-cyber-pink mb-3">Bパターン</h3>
+            <div class="score-display">
+              <span>${result.scores?.B || '—'}</span>
+              <div class="text-sm text-gray-400">
+                ${result.scores?.B >= 80 ? '優秀' : result.scores?.B >= 60 ? '良好' : '要改善'}
+              </div>
+            </div>
+            <div class="text-sm text-gray-300">
+              ${result.reasons?.B || '分析結果がありません'}
+            </div>
+          </div>
+        </div>
+        
+        <!-- 勝者判定 -->
+        <div class="text-center p-4 bg-gradient-to-r from-cyber-blue/20 to-cyber-purple/20 rounded-lg">
+          <h3 class="text-xl font-bold text-white mb-2">🏆 勝者判定</h3>
+          <div class="text-2xl font-bold text-cyber-green">
+            ${result.winner || '判定できません'}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    resultsArea.innerHTML = resultsHTML;
+    resultsArea.classList.remove('hidden');
+    
+    // 結果までスクロール
+    resultsArea.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // 利用状況更新
+  async function updateUsageInfo() {
+    try {
+      const response = await fetch('/api/usage/dashboard', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const usage = await response.json();
+        // 利用状況を更新（実装は後で）
+        console.log('利用状況更新:', usage);
+      }
+    } catch (error) {
+      console.error('利用状況更新エラー:', error);
+    }
+  }
+
+  // エラーメッセージ表示
+  function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'fixed top-4 right-4 bg-red-500/90 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+    errorDiv.innerHTML = `
+      <div class="flex items-center">
+        <i class="fas fa-exclamation-triangle mr-2"></i>
+        <span>${message}</span>
+      </div>
+    `;
+
+    document.body.appendChild(errorDiv);
+    setTimeout(() => errorDiv.remove(), 5000);
+  }
+
+  // 成功メッセージ表示
+  function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'fixed top-4 right-4 bg-green-500/90 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+    successDiv.innerHTML = `
+      <div class="flex items-center">
+        <i class="fas fa-check-circle mr-2"></i>
+        <span>${message}</span>
+      </div>
+    `;
+
+    document.body.appendChild(successDiv);
+    setTimeout(() => successDiv.remove(), 3000);
+  }
 
   // 初期化
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('分析ページ JavaScript 初期化開始');
+    console.log('古いzipのUI対応分析ページ JavaScript 初期化開始');
     setupDragAndDrop();
-    updateScoringTypeDisplay();
+    
+    // 初期カテゴリオプション設定
+    updateCategoryOptions();
   });
 })();
