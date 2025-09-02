@@ -255,6 +255,106 @@ async function handleApi(request, env) {
     }
   }
 
+  // banasuko01接続機能
+  if (pathname === '/api/banasuko01/connect' && request.method === 'POST') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (!token || (token !== 'demo-token' && !token.startsWith('user-'))) {
+      return json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+    
+    try {
+      const body = await request.json();
+      const { connectionType, connectionData } = body;
+      
+      // 接続タイプのバリデーション
+      if (!connectionType || !['database', 'api', 'service'].includes(connectionType)) {
+        return json({ success: false, error: '無効な接続タイプです' }, { status: 400 });
+      }
+      
+      // デモ用の接続処理（後で実際の接続処理に置換）
+      const connectionResult = {
+        success: true,
+        connection: {
+          id: `conn-${Date.now()}`,
+          type: connectionType,
+          status: 'connected',
+          timestamp: new Date().toISOString(),
+          data: connectionData || {}
+        },
+        message: 'banasuko01への接続が確立されました'
+      };
+      
+      return json(connectionResult);
+      
+    } catch (error) {
+      console.error('Banasuko01 connection error:', error);
+      return json({ success: false, error: '接続処理中にエラーが発生しました' }, { status: 500 });
+    }
+  }
+
+  if (pathname === '/api/banasuko01/status' && request.method === 'GET') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (!token || (token !== 'demo-token' && !token.startsWith('user-'))) {
+      return json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+    
+    // 接続状態の確認
+    const connectionStatus = {
+      success: true,
+      connections: [
+        {
+          id: 'conn-demo-1',
+          type: 'database',
+          status: 'connected',
+          lastSeen: new Date().toISOString(),
+          endpoint: 'banasuko01-db.example.com'
+        },
+        {
+          id: 'conn-demo-2',
+          type: 'api',
+          status: 'connected',
+          lastSeen: new Date().toISOString(),
+          endpoint: 'banasuko01-api.example.com'
+        }
+      ],
+      overallStatus: 'healthy'
+    };
+    
+    return json(connectionStatus);
+  }
+
+  if (pathname === '/api/banasuko01/disconnect' && request.method === 'POST') {
+    const token = readCookie(request, COOKIE_NAME);
+    
+    if (!token || (token !== 'demo-token' && !token.startsWith('user-'))) {
+      return json({ success: false, error: '認証が必要です' }, { status: 401 });
+    }
+    
+    try {
+      const body = await request.json();
+      const { connectionId } = body;
+      
+      if (!connectionId) {
+        return json({ success: false, error: '接続IDが必要です' }, { status: 400 });
+      }
+      
+      // デモ用の切断処理
+      const disconnectResult = {
+        success: true,
+        message: `接続 ${connectionId} が正常に切断されました`,
+        timestamp: new Date().toISOString()
+      };
+      
+      return json(disconnectResult);
+      
+    } catch (error) {
+      console.error('Banasuko01 disconnection error:', error);
+      return json({ success: false, error: '切断処理中にエラーが発生しました' }, { status: 500 });
+    }
+  }
+
   // Webhook（署名検証は後で実装）
   if (pathname === '/api/stripe/webhook' && request.method === 'POST') {
     return new Response(null, { status: 204 });
