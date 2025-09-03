@@ -1,4 +1,0 @@
-/login /login.html 200
-/analysis/* /_worker.js 200
-/api/* /_worker.js 200
-/* /index.html 200
