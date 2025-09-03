@@ -1,14 +1,14 @@
-// ユーザープロファイル管理API - Firestore連携版
+// ユーザープロファイル管理API
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { jwtVerify, createRemoteJWKSet } from 'jose'
+import { UserService } from '../../../src/services/userService'
 
 // Cloudflare Pages Bindings型定義
 type Env = { 
   OPENAI_API_KEY: string
   PING: string
   FIREBASE_PROJECT_ID: string
-  FIREBASE_PRIVATE_KEY: string
-  FIREBASE_CLIENT_EMAIL: string
 }
 
 const app = new Hono<{ Bindings: Env }>()
@@ -16,58 +16,53 @@ const app = new Hono<{ Bindings: Env }>()
 // CORS設定
 app.use('*', cors())
 
-// Firestore接続
-async function getFirestore(c: any) {
-  const { initializeApp, cert } = await import('firebase-admin/app')
-  const { getFirestore } = await import('firebase-admin/firestore')
+// Google Secure Token のJWK
+const JWKS = createRemoteJWKSet(
+  new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+);
+
+// ユーザープロファイル取得（認証付き）
+app.get('/', async (c) => {
+  const user = c.get('user')
+  if (!user) {
+    return c.json({ success: false, error: 'ログインが必要です' }, 401)
+  }
   
-  const privateKey = c.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-  
-  const firebaseApp = initializeApp({
-    credential: cert({
-      projectId: c.env.FIREBASE_PROJECT_ID,
-      privateKey: privateKey,
-      clientEmail: c.env.FIREBASE_CLIENT_EMAIL,
-    }),
-    projectId: c.env.FIREBASE_PROJECT_ID,
-  })
-  
-  return getFirestore(firebaseApp)
-}
+  return c.json({ success: true, ...user })
+})
 
 // ユーザープロファイル作成（新規登録時）
 app.post('/', async (c) => {
   try {
-    console.log('📝 User profile creation request received');
+    // Authorization ヘッダーからBearerトークンを取得
+    const authorization = c.req.header('Authorization')
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+      return c.json({ success: false, error: 'Authorization token required' }, 401)
+    }
+    
+    const idToken = authorization.substring(7) // 'Bearer ' を削除
+    const projectId = c.env.FIREBASE_PROJECT_ID || 'banasuko-auth'
+    
+    // Firebase IDトークンを検証
+    const { payload } = await jwtVerify(idToken, JWKS, {
+      issuer: `https://securetoken.google.com/${projectId}`,
+      audience: projectId,
+    })
     
     // リクエストボディからユーザー情報を取得
     const body = await c.req.json()
-    const { email, displayName, plan = 'free', uid } = body
+    const { displayName, email } = body
     
     if (!email) {
       return c.json({ success: false, error: 'Email is required' }, 400)
     }
     
-    // Firestoreに接続
-    const db = await getFirestore(c)
-    
-    // ユーザーIDの生成（登録APIから渡されたUIDを使用、または新規生成）
-    const userId = uid || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    
-    // Firestoreにユーザープロファイルを保存
-    const userData = {
-      uid: userId,
-      email: email,
-      displayName: displayName || email.split('@')[0],
-      plan: plan,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    
-    // Firestoreに書き込み
-    await db.collection('users').doc(userId).set(userData)
-    
-    console.log('✅ User profile saved to Firestore:', userData.email);
+    // Firestoreにユーザープロファイルを作成
+    const userData = await UserService.createUserFromFirebaseAuth(
+      payload.sub as string, // Firebase UID
+      email as string,
+      displayName as string
+    )
     
     return c.json({ 
       success: true, 
@@ -76,15 +71,10 @@ app.post('/', async (c) => {
     })
     
   } catch (error) {
-    console.error('💥 Profile creation error:', error)
+    console.error('Profile creation error:', error)
     return c.json({ 
       success: false, 
-      error: 'Failed to create user profile',
-      debug: {
-        timestamp: new Date().toISOString(),
-        errorType: error.constructor.name,
-        message: error.message
-      }
+      error: 'Failed to create user profile' 
     }, 500)
   }
 })

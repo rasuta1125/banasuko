@@ -118,38 +118,48 @@ export async function onRequestPost(context) {
     };
 
     // Firebase Admin SDK を使わずに REST API で直接書き込み
-    // 注意: 本番環境では適切な認証が必要
+    // 注意: デモ環境用の実装
     console.log('📝 Creating Firestore profile...');
     
     try {
+      // まずFirestoreルールが書き込み可能かテスト
       const firestoreResponse = await fetch(firestoreUrl, {
-        method: 'PATCH',
+        method: 'PATCH', 
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(profileData)
       });
+      
+      console.log('🔍 Firestore response:', firestoreResponse.status, firestoreResponse.statusText);
+      
+      // レスポンスボディをログ出力
+      const responseText = await firestoreResponse.text();
+      console.log('📄 Firestore response body:', responseText);
 
       if (firestoreResponse.ok) {
         console.log('✅ Firestore profile created successfully');
         
         return new Response(JSON.stringify({
           success: true,
-          message: 'Profile created successfully',
+          message: 'Profile created successfully in Firestore',
           user: {
             uid: user.uid,
             email: body.email,
             displayName: body.displayName || body.email?.split('@')[0] || 'ユーザー',
             plan: 'free',
             createdAt: new Date().toISOString()
-          }
+          },
+          firestore: 'success'
         }), {
           status: 200,
           headers: corsHeaders
         });
       } else {
-        console.error('❌ Firestore write failed:', firestoreResponse.status, await firestoreResponse.text());
-        throw new Error(`Firestore write failed: ${firestoreResponse.status}`);
+        console.error('❌ Firestore write failed:', firestoreResponse.status, responseText);
+        
+        // Firestore書き込み失敗の詳細をレスポンスに含める
+        throw new Error(`Firestore write failed: ${firestoreResponse.status} - ${responseText}`);
       }
     } catch (firestoreError) {
       console.error('❌ Firestore error:', firestoreError);

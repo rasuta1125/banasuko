@@ -1,311 +1,407 @@
+// Firebase Authentication JavaScript統合
+// バナスコAI - ログイン・登録機能 (Firebase v9 modular)
 
-// バナスコAI - 統一セッション管理対応ログイン機能
+// Firebase設定
+const firebaseConfig = {
+  apiKey: "AIzaSyAflp1vqSA21sSYihZDTpje-MB1mCALxBs",
+  authDomain: "banasuko-auth.firebaseapp.com",
+  projectId: "banasuko-auth",
+  storageBucket: "banasuko-auth.firebasestorage.app",
+  messagingSenderId: "753581941845",
+  appId: "1:753581941845:web:18418afb254c309933e0dc",
+  measurementId: "G-09515RW8KC"
+};
 
-// ローディング状態管理
-function setLoading(isLoading) {
-  const loginBtn = document.getElementById('loginButton');
-  const loginBtnText = document.getElementById('loginButtonText');
-  const loginSpinner = document.getElementById('loginSpinner');
-  
-  if (loginBtn) {
-    loginBtn.disabled = isLoading;
+// Firebase v9 モジュラー式でインポート
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut 
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+// Firebase初期化
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// グローバル変数
+let currentUser = null;
+let isAuthReady = false;
+
+// 統一されたログイン関数
+export async function login(email, password) {
+  const { user } = await signInWithEmailAndPassword(auth, email.trim(), password);
+  const idToken = await user.getIdToken();
+
+  const res = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ idToken }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.ok) {
+    throw new Error(data?.message || `session failed (${res.status})`);
   }
   
-  if (loginBtnText) {
-    loginBtnText.textContent = isLoading ? 'ログイン中...' : 'ログイン';
-  }
-  
-  if (loginSpinner) {
-    loginSpinner.style.display = isLoading ? 'inline-block' : 'none';
-  }
+  console.log('Login successful:', data);
+  return data;
 }
 
-// メッセージ表示管理
-function showError(message) {
-  const errorMessage = document.getElementById('errorMessage');
-  const errorText = document.getElementById('errorText');
-  
-  if (errorMessage && errorText) {
-    errorText.textContent = message;
-    errorMessage.classList.remove('hidden');
+// 統一された登録関数
+export async function register(email, password) {
+  const { user } = await createUserWithEmailAndPassword(auth, email.trim(), password);
+  const idToken = await user.getIdToken();
+
+  // セッション作成
+  const res = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ idToken }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.ok) {
+    throw new Error(data?.message || `session failed (${res.status})`);
+  }
+
+  // ユーザープロフィール作成（新規登録時のみ）
+  try {
+    await fetch('/api/user/profile', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify({
+        displayName: email.split('@')[0], // メールアドレスの@より前を表示名として使用
+        email: email
+      }),
+    });
+  } catch (profileError) {
+    console.warn('Profile creation failed (non-critical):', profileError);
   }
   
-  console.error('Login Error:', message);
+  console.log('Register successful:', data);
+  return data;
 }
 
-function showSuccess(message) {
-  const successMessage = document.getElementById('successMessage');
-  const successText = document.getElementById('successText');
-  
-  if (successMessage && successText) {
-    successText.textContent = message;
-    successMessage.classList.remove('hidden');
+// 認証状態管理
+class AuthManager {
+  constructor() {
+    this.initializeAuth();
+    this.setupEventListeners();
   }
-  
-  console.log('Login Success:', message);
-}
 
-function hideMessages() {
-  const errorMessage = document.getElementById('errorMessage');
-  const successMessage = document.getElementById('successMessage');
-  
-  if (errorMessage) {
-    errorMessage.classList.add('hidden');
-  }
-  
-  if (successMessage) {
-    successMessage.classList.add('hidden');
-  }
-}
-
-// フォーム送信処理（統一セッション管理システムを使用）
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('バナスコAI ログインシステム初期化');
-  
-  const loginForm = document.getElementById('loginForm');
-  const demoLoginBtn = document.getElementById('demoLoginBtn');
-  
-  // ログインフォーム送信処理
-  if (loginForm) {
-    loginForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
+  // Firebase初期化
+  async initializeAuth() {
+    try {
+      console.log('Firebase Auth 初期化中...');
       
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      
-      // ローディング状態
-      setLoading(true);
-      hideMessages();
-      
-      try {
-        // 統一セッション管理システムを使用
-        const result = await window.sessionManager.login(email, password);
-        
-        if (result.success) {
-          showSuccess('ログインに成功しました！ダッシュボードにリダイレクトします...');
-          // セッション管理システムが自動的にリダイレクトを処理
+      // 認証状態変更の監視
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          console.log('ユーザーログイン済み:', user.email);
+          currentUser = user;
+          
+          // ダッシュボードにリダイレクト
+          if (window.location.pathname === '/login') {
+            window.location.href = '/dashboard';
+          }
         } else {
-          showError(result.error || 'ログインに失敗しました');
+          console.log('ユーザーログアウト状態');
+          currentUser = null;
+          
+          // ログインページ以外にいる場合はリダイレクト
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+            window.location.href = '/login';
+          }
         }
-      } catch (error) {
-        showError('ネットワークエラーが発生しました');
-        console.error('Login error:', error);
-      } finally {
-        setLoading(false);
-      }
-    });
-  }
-  
-  // デモログインボタン処理
-  if (demoLoginBtn) {
-    demoLoginBtn.addEventListener('click', async function(e) {
-      e.preventDefault();
-      
-      // デモアカウント情報を自動入力
-      const emailInput = document.getElementById('email');
-      const passwordInput = document.getElementById('password');
-      
-      if (emailInput && passwordInput) {
-        emailInput.value = 'demo@banasuko.com';
-        passwordInput.value = 'demo123';
         
-        // ログインフォームを自動送信
-        if (loginForm) {
-          loginForm.dispatchEvent(new Event('submit'));
-        }
-      }
-    });
-  }
-  
-  // 新規登録リンク処理
-  const signupLink = document.getElementById('signupLink');
-  if (signupLink) {
-    signupLink.addEventListener('click', function(e) {
-      e.preventDefault();
+        isAuthReady = true;
+      });
       
-      // 新規登録モーダルを表示
-      showSignupModal();
-    });
+      console.log('Firebase Auth 初期化完了');
+    } catch (error) {
+      console.error('Firebase Auth 初期化エラー:', error);
+      this.showError('認証システムの初期化に失敗しました');
+    }
   }
-  
-  console.log('バナスコAI ログインシステム初期化完了');
-});
 
-// 新規登録モーダル表示
-function showSignupModal() {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-  modal.innerHTML = `
-    <div class="bg-navy-800/90 backdrop-blur-lg rounded-3xl border border-cyber-blue/20 p-8 shadow-2xl w-full max-w-md mx-4">
-      <div class="text-center mb-6">
-        <h2 class="text-2xl font-orbitron font-bold text-white mb-2">新規登録</h2>
-        <p class="text-gray-400">新しいアカウントを作成</p>
-      </div>
-      
-      <form id="signupForm" class="space-y-4">
-        <div>
-          <label for="signupEmail" class="block text-sm font-medium text-gray-300 mb-2">
-            <i class="fas fa-envelope mr-2 text-cyber-blue"></i>メールアドレス
-          </label>
-          <input type="email" id="signupEmail" required placeholder="example@email.com" 
-                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/20 transition-all">
-        </div>
-        <div>
-          <label for="signupPassword" class="block text-sm font-medium text-gray-300 mb-2">
-            <i class="fas fa-lock mr-2 text-cyber-blue"></i>パスワード
-          </label>
-          <input type="password" id="signupPassword" required placeholder="6文字以上" 
-                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/20 transition-all">
-        </div>
-        <div>
-          <label for="signupPasswordConfirm" class="block text-sm font-medium text-gray-300 mb-2">
-            <i class="fas fa-lock mr-2 text-cyber-blue"></i>パスワード確認
-          </label>
-          <input type="password" id="signupPasswordConfirm" required placeholder="パスワードを再入力" 
-                 class="w-full px-4 py-3 bg-navy-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/20 transition-all">
-        </div>
-        
-        <div id="signupError" class="bg-red-500/20 border border-red-500/30 rounded-xl p-3 hidden">
-          <div class="flex items-center">
-            <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
-            <span id="signupErrorText" class="text-red-300 text-sm"></span>
-          </div>
-        </div>
-        
-        <div id="signupSuccess" class="bg-green-500/20 border border-green-500/30 rounded-xl p-3 hidden">
-          <div class="flex items-center">
-            <i class="fas fa-check-circle text-green-400 mr-2"></i>
-            <span id="signupSuccessText" class="text-green-300 text-sm"></span>
-          </div>
-        </div>
-        
-        <div class="flex space-x-3">
-          <button type="submit" id="signupButton" 
-                  class="flex-1 bg-gradient-to-r from-cyber-blue to-cyber-purple text-white py-3 px-6 rounded-xl font-semibold hover:from-cyber-purple hover:to-cyber-blue transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyber-blue/25">
-            <span id="signupButtonText">登録</span>
-            <div id="signupSpinner" class="hidden">
-              <i class="fas fa-spinner fa-spin"></i>
-            </div>
-          </button>
-          <button type="button" id="cancelSignup" 
-                  class="px-6 py-3 bg-gray-600 text-white rounded-xl font-semibold hover:bg-gray-700 transition-all">
-            キャンセル
-          </button>
-        </div>
-      </form>
-    </div>
-  `;
-  
-  document.body.appendChild(modal);
-  
-  // フォーム送信処理
-  const signupForm = document.getElementById('signupForm');
-  const cancelBtn = document.getElementById('cancelSignup');
-  
-  signupForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const email = document.getElementById('signupEmail').value;
-    const password = document.getElementById('signupPassword').value;
-    const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
-    
-    // バリデーション
-    if (password !== passwordConfirm) {
-      showSignupError('パスワードが一致しません');
+  // イベントリスナー設定
+  setupEventListeners() {
+    // ログインフォーム
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+      loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.handleLogin();
+      });
+    }
+
+    // 登録フォーム
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+      registerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.handleRegister();
+      });
+    }
+
+    // デモログインボタン
+    const demoLoginBtn = document.getElementById('demoLoginBtn');
+    if (demoLoginBtn) {
+      demoLoginBtn.addEventListener('click', () => {
+        this.handleDemoLogin();
+      });
+    }
+
+    // ログアウトボタン
+    const logoutBtns = document.querySelectorAll('.logout-btn, #logoutBtn');
+    logoutBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.handleLogout();
+      });
+    });
+  }
+
+  // ログイン処理
+  async handleLogin() {
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value;
+
+    if (!email || !password) {
+      this.showError('メールアドレスとパスワードを入力してください');
       return;
     }
-    
-    if (password.length < 6) {
-      showSignupError('パスワードは6文字以上で入力してください');
-      return;
-    }
-    
-    // ローディング状態
-    setSignupLoading(true);
-    hideSignupMessages();
+
+    const loginBtn = document.querySelector('#loginForm button[type="submit"]');
+    const originalText = loginBtn?.textContent;
     
     try {
-      // 統一セッション管理システムを使用
-      const result = await window.sessionManager.register(email, password);
-      
-      if (result.success) {
-        showSignupSuccess('アカウントを作成しました！ダッシュボードにリダイレクトします...');
-        // セッション管理システムが自動的にリダイレクトを処理
-      } else {
-        showSignupError(result.error || 'アカウント作成に失敗しました');
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'ログイン中...';
       }
+
+      console.log('Firebase login attempt:', { 
+        email: email, 
+        passwordLength: password.length 
+      });
+
+      // 統一されたログイン関数を使用
+      await login(email, password);
+      
+      this.showSuccess('ログインに成功しました');
+      
     } catch (error) {
-      showSignupError('ネットワークエラーが発生しました');
-      console.error('Signup error:', error);
+      console.error('ログインエラー:', error);
+      
+      // Firebase認証エラーの詳細表示
+      let errorMessage = 'ログインに失敗しました';
+      
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/invalid-credential':
+            errorMessage = 'メールアドレスまたはパスワードが正しくありません';
+            break;
+          case 'auth/user-not-found':
+            errorMessage = 'このメールアドレスのユーザーは見つかりませんでした';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = 'パスワードが正しくありません';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'メールアドレスの形式が正しくありません';
+            break;
+          case 'auth/user-disabled':
+            errorMessage = 'このアカウントは無効化されています';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'ログイン試行回数が多すぎます。しばらく時間をおいて再試行してください';
+            break;
+        }
+      } else if (error.message?.includes('session failed')) {
+        errorMessage = `セッション作成エラー: ${error.message}`;
+      }
+      
+      this.showError(errorMessage);
+      
     } finally {
-      setSignupLoading(false);
+      if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = originalText;
+      }
     }
-  });
-  
-  // キャンセルボタン
-  cancelBtn.addEventListener('click', function() {
-    document.body.removeChild(modal);
-  });
-  
-  // モーダル外クリックで閉じる
-  modal.addEventListener('click', function(e) {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
+  }
+
+  // 登録処理
+  async handleRegister() {
+    const email = document.getElementById('registerEmail')?.value.trim();
+    const password = document.getElementById('registerPassword')?.value;
+    const confirmPassword = document.getElementById('confirmPassword')?.value;
+
+    if (!email || !password || !confirmPassword) {
+      this.showError('すべての項目を入力してください');
+      return;
     }
-  });
+
+    if (password !== confirmPassword) {
+      this.showError('パスワードが一致しません');
+      return;
+    }
+
+    if (password.length < 6) {
+      this.showError('パスワードは6文字以上で入力してください');
+      return;
+    }
+
+    const registerBtn = document.querySelector('#registerForm button[type="submit"]');
+    const originalText = registerBtn?.textContent;
+    
+    try {
+      if (registerBtn) {
+        registerBtn.disabled = true;
+        registerBtn.textContent = '登録中...';
+      }
+
+      console.log('Firebase register attempt:', { 
+        email: email, 
+        passwordLength: password.length 
+      });
+
+      // 統一された登録関数を使用
+      await register(email, password);
+      
+      this.showSuccess('アカウント登録に成功しました');
+      
+    } catch (error) {
+      console.error('登録エラー:', error);
+      
+      let errorMessage = 'アカウント登録に失敗しました';
+      
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = 'このメールアドレスは既に使用されています';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'メールアドレスの形式が正しくありません';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'パスワードが弱すぎます。より強力なパスワードを設定してください';
+            break;
+        }
+      } else if (error.message?.includes('session failed')) {
+        errorMessage = `セッション作成エラー: ${error.message}`;
+      }
+      
+      this.showError(errorMessage);
+      
+    } finally {
+      if (registerBtn) {
+        registerBtn.disabled = false;
+        registerBtn.textContent = originalText;
+      }
+    }
+  }
+
+  // デモログイン処理
+  async handleDemoLogin() {
+    const demoEmail = 'demo@banasuko.com';
+    const demoPassword = 'demo123456';
+    
+    // フォームにデモ情報を設定
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    
+    if (emailInput && passwordInput) {
+      emailInput.value = demoEmail;
+      passwordInput.value = demoPassword;
+      
+      // ログイン実行
+      await this.handleLogin();
+    }
+  }
+
+  // ログアウト処理
+  async handleLogout() {
+    try {
+      await signOut(auth);
+      console.log('ログアウト成功');
+      
+      this.showSuccess('ログアウトしました');
+      
+      // ログインページにリダイレクト
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1000);
+      
+    } catch (error) {
+      console.error('ログアウトエラー:', error);
+      this.showError('ログアウトに失敗しました');
+    }
+  }
+
+  // エラーメッセージ表示
+  showError(message) {
+    console.error('Auth Error:', message);
+    
+    // エラーメッセージ要素があれば表示
+    const errorElement = document.getElementById('errorMessage');
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.style.display = 'block';
+      
+      // 5秒後に自動非表示
+      setTimeout(() => {
+        errorElement.style.display = 'none';
+      }, 5000);
+    }
+    
+    // アラートでも表示
+    alert(message);
+  }
+
+  // 成功メッセージ表示
+  showSuccess(message) {
+    console.log('Auth Success:', message);
+    
+    // 成功メッセージ要素があれば表示
+    const successElement = document.getElementById('successMessage');
+    if (successElement) {
+      successElement.textContent = message;
+      successElement.style.display = 'block';
+      
+      // 3秒後に自動非表示
+      setTimeout(() => {
+        successElement.style.display = 'none';
+      }, 3000);
+    }
+  }
+
+  // 現在のユーザーを取得
+  getCurrentUser() {
+    return currentUser;
+  }
+
+  // 認証準備完了かチェック
+  isReady() {
+    return isAuthReady;
+  }
 }
 
-// 新規登録用のヘルパー関数
-function setSignupLoading(isLoading) {
-  const signupBtn = document.getElementById('signupButton');
-  const signupBtnText = document.getElementById('signupButtonText');
-  const signupSpinner = document.getElementById('signupSpinner');
-  
-  if (signupBtn) {
-    signupBtn.disabled = isLoading;
-  }
-  
-  if (signupBtnText) {
-    signupBtnText.textContent = isLoading ? '登録中...' : '登録';
-  }
-  
-  if (signupSpinner) {
-    signupSpinner.style.display = isLoading ? 'inline-block' : 'none';
-  }
-}
-
-function showSignupError(message) {
-  const errorEl = document.getElementById('signupError');
-  const errorText = document.getElementById('signupErrorText');
-  
-  if (errorEl && errorText) {
-    errorText.textContent = message;
-    errorEl.classList.remove('hidden');
-  }
-}
-
-function showSignupSuccess(message) {
-  const successEl = document.getElementById('signupSuccess');
-  const successText = document.getElementById('signupSuccessText');
-  
-  if (successEl && successText) {
-    successText.textContent = message;
-    successEl.classList.remove('hidden');
-  }
-}
-
-function hideSignupMessages() {
-  const errorEl = document.getElementById('signupError');
-  const successEl = document.getElementById('signupSuccess');
-  
-  if (errorEl) errorEl.classList.add('hidden');
-  if (successEl) successEl.classList.add('hidden');
-}
-
-// ログアウト機能（ダッシュボード用）
-function logout() {
-  window.sessionManager.logout();
-}
+// ページ読み込み時に認証マネージャーを初期化
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('認証システム初期化開始');
+  window.authManager = new AuthManager();
+});
 
 // グローバルに公開
-window.logout = logout;
+window.AuthManager = AuthManager;
+window.login = login;
+window.register = register;

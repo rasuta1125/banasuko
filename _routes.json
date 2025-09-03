@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "include": [
+    "/",
+    "/login",
+    "/dashboard", 
+    "/analysis",
+    "/copy-generation",
+    "/admin",
+    "/plan",
+    "/api/*"
+  ],
+  "exclude": [
+    "/static/*",
+    "/js/*",
+    "/css/*",
+    "/images/*",
+    "/*.ico",
+    "/*.png",
+    "/*.svg",
+    "/*.jpg",
+    "/*.jpeg",
+    "/*.gif",
+    "/*.webp",
+    "/*.woff*",
+    "/*.ttf",
+    "/*.eot"
+  ]
+}

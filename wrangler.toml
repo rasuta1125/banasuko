@@ -3,6 +3,9 @@ compatibility_date = "2025-08-21"
 pages_build_output_dir = "./dist"
 compatibility_flags = ["nodejs_compat"]
 
+[functions]
+directory = "functions"
+
 # プロダクション環境用設定
 [env.production]
 compatibility_flags = ["nodejs_compat"]
@@ -15,31 +18,6 @@ type = "secret"
 name = "PING"
 type = "secret"
 
-[[env.production.bindings]]
-name = "FIREBASE_PROJECT_ID"
-type = "secret"
-
-[[env.production.bindings]]
-name = "FIREBASE_API_KEY"
-type = "secret"
-
-# 初代バナスコと同じ環境変数を追加
-[[env.production.bindings]]
-name = "FIREBASE_WEB_API_KEY"
-type = "secret"
-
-[[env.production.bindings]]
-name = "FIREBASE_STORAGE_BUCKET"
-type = "secret"
-
-[[env.production.bindings]]
-name = "FIREBASE_PRIVATE_KEY"
-type = "secret"
-
-[[env.production.bindings]]
-name = "FIREBASE_CLIENT_EMAIL"
-type = "secret"
-
 # プレビュー環境用設定
 [env.preview]
 compatibility_flags = ["nodejs_compat"]
@@ -50,31 +28,6 @@ type = "secret"
 
 [[env.preview.bindings]]
 name = "PING"
-type = "secret"
-
-[[env.preview.bindings]]
-name = "FIREBASE_PROJECT_ID"
-type = "secret"
-
-[[env.production.bindings]]
-name = "FIREBASE_API_KEY"
-type = "secret"
-
-# 初代バナスコと同じ環境変数を追加
-[[env.preview.bindings]]
-name = "FIREBASE_WEB_API_KEY"
-type = "secret"
-
-[[env.preview.bindings]]
-name = "FIREBASE_STORAGE_BUCKET"
-type = "secret"
-
-[[env.preview.bindings]]
-name = "FIREBASE_PRIVATE_KEY"
-type = "secret"
-
-[[env.preview.bindings]]
-name = "FIREBASE_CLIENT_EMAIL"
 type = "secret"
 
 # Note: デフォルト環境は開発時のみ使用
