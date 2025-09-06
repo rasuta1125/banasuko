@@ -9,6 +9,11 @@ type Env = {
   OPENAI_API_KEY: string
   PING: string
   FIREBASE_PROJECT_ID: string
+  FIREBASE_API_KEY: string
+  FIREBASE_WEB_API_KEY: string
+  FIREBASE_STORAGE_BUCKET: string
+  FIREBASE_PRIVATE_KEY: string
+  FIREBASE_CLIENT_EMAIL: string
 }
 
 import { renderer } from './renderer'
@@ -138,6 +143,14 @@ app.options('/api/analysis/single', (c) => {
 });
 
 app.options('/api/analysis/ab', (c) => {
+  return c.body(null, 204);
+});
+
+app.options('/api/analysis/banasco', (c) => {
+  return c.body(null, 204);
+});
+
+app.options('/api/analysis/ab-compare', (c) => {
   return c.body(null, 204);
 });
 
@@ -374,6 +387,197 @@ app.post('/api/analysis/ab', async (c) => {
   }
 })
 
+// バナスコAI 単一画像分析エンドポイント
+app.post('/api/analysis/banasco', async (c) => {
+  console.log('🧠 バナスコAI 分析エンドポイント呼び出し')
+  
+  try {
+    const user = getUserFromSession(c)
+    if (!user) {
+      return c.json({ success: false, message: 'Not authenticated' }, 401)
+    }
+
+    // FormData処理対応
+    const formData = await c.req.formData()
+    const imageFile = formData.get('image') as File
+    const platform = formData.get('platform') as string
+    const category = formData.get('category') as string
+    const purpose = formData.get('purpose') as string
+    const industry = formData.get('industry') as string
+    const pattern = formData.get('pattern') as string
+
+    if (!imageFile || !platform || !category || !industry) {
+      return c.json({ success: false, message: 'Required fields missing' }, 400)
+    }
+
+    // Firebase設定確認
+    const projectId = c.env.FIREBASE_PROJECT_ID
+    const openaiKey = c.env.OPENAI_API_KEY
+    
+    if (!openaiKey) {
+      console.error('❌ OpenAI API Key not configured')
+      return c.json({ success: false, message: 'AI service not configured' }, 500)
+    }
+    
+    if (!projectId) {
+      console.error('❌ Firebase Project ID not configured')
+      return c.json({ success: false, message: 'Database service not configured' }, 500)
+    }
+
+    // 利用制限チェック
+    const userData = await getUserDataFromFirestore(user.uid, projectId)
+    if (userData.remaining_uses <= 0) {
+      return c.json({ 
+        success: false, 
+        message: '利用回数が上限に達しました。プランをアップグレードしてください。',
+        remaining_uses: 0
+      }, 403)
+    }
+
+    console.log('🎯 バナスコAI分析開始:', { platform, category, purpose, industry, pattern, user: user.uid, remaining_uses: userData.remaining_uses })
+
+    // 画像をBase64に変換
+    const imageBase64 = `data:${imageFile.type};base64,${btoa(String.fromCharCode(...new Uint8Array(await imageFile.arrayBuffer())))}`
+    
+    // バナスコAI Vision API呼び出し
+    const analysisResult = await performBanascoAnalysis(imageBase64, platform, category, purpose, industry, openaiKey)
+    
+    console.log('✅ バナスコAI分析完了:', analysisResult.score)
+
+    // 利用回数を減らす
+    const updateSuccess = await updateUserUsesInFirestore(user.uid, projectId, 1)
+    if (!updateSuccess) {
+      console.warn('⚠️ 利用回数の更新に失敗しました')
+    }
+
+    // 診断記録をFirestoreに保存
+    const recordSuccess = await addBanascoDiagnosisRecord(user.uid, projectId, {
+      ...analysisResult,
+      pattern
+    })
+    if (!recordSuccess) {
+      console.warn('⚠️ 診断記録の保存に失敗しました')
+    }
+
+    return c.json({
+      success: true,
+      result: analysisResult,
+      remaining_uses: Math.max(0, userData.remaining_uses - 1),
+      message: 'バナスコAI分析が完了しました'
+    })
+
+  } catch (error) {
+    console.error('❌ バナスコAI分析エラー:', error)
+    return c.json({ 
+      success: false, 
+      message: 'バナスコAI分析中にエラーが発生しました。もう一度試してください。',
+      error: error.message 
+    }, 500)
+  }
+})
+
+// バナスコAI A/B比較エンドポイント
+app.post('/api/analysis/ab-compare', async (c) => {
+  console.log('🧠 バナスコAI A/B比較エンドポイント呼び出し')
+  
+  try {
+    const user = getUserFromSession(c)
+    if (!user) {
+      return c.json({ success: false, message: 'Not authenticated' }, 401)
+    }
+
+    const formData = await c.req.formData()
+    const imageFileA = formData.get('imageA') as File
+    const imageFileB = formData.get('imageB') as File
+    const platform = formData.get('platform') as string
+    const category = formData.get('category') as string
+    const purpose = formData.get('purpose') as string
+    const industry = formData.get('industry') as string
+
+    if (!imageFileA || !imageFileB || !platform || !category || !industry) {
+      return c.json({ success: false, message: 'Required fields missing for A/B comparison' }, 400)
+    }
+
+    // Firebase設定確認
+    const projectId = c.env.FIREBASE_PROJECT_ID
+    const openaiKey = c.env.OPENAI_API_KEY
+    
+    if (!openaiKey) {
+      return c.json({ success: false, message: 'AI service not configured' }, 500)
+    }
+    
+    if (!projectId) {
+      return c.json({ success: false, message: 'Database service not configured' }, 500)
+    }
+
+    // 利用制限チェック（A/B比較は2回分として計算）
+    const userData = await getUserDataFromFirestore(user.uid, projectId)
+    if (userData.remaining_uses < 2) {
+      return c.json({ 
+        success: false, 
+        message: 'A/B比較には2回分の利用回数が必要です。残り回数が不足しています。',
+        remaining_uses: userData.remaining_uses
+      }, 403)
+    }
+
+    console.log('🎯 バナスコAI A/B分析開始:', { platform, category, purpose, industry, user: user.uid, remaining_uses: userData.remaining_uses })
+
+    // 両方の画像をBase64に変換
+    const imageA_Base64 = `data:${imageFileA.type};base64,${btoa(String.fromCharCode(...new Uint8Array(await imageFileA.arrayBuffer())))}`
+    const imageB_Base64 = `data:${imageFileB.type};base64,${btoa(String.fromCharCode(...new Uint8Array(await imageFileB.arrayBuffer())))}`
+
+    // 両方の画像を分析
+    const [resultA, resultB] = await Promise.all([
+      performBanascoAnalysis(imageA_Base64, platform, category, purpose, industry, openaiKey),
+      performBanascoAnalysis(imageB_Base64, platform, category, purpose, industry, openaiKey)
+    ])
+
+    console.log('✅ バナスコAI A/B分析完了')
+
+    // 利用回数を減らす（A/B比較は2回分）
+    const updateSuccess = await updateUserUsesInFirestore(user.uid, projectId, 2)
+    if (!updateSuccess) {
+      console.warn('⚠️ 利用回数の更新に失敗しました')
+    }
+
+    // A/B比較記録をFirestoreに保存
+    const comparison = generateBanascoComparison(resultA, resultB)
+    const recordSuccess = await addBanascoDiagnosisRecord(user.uid, projectId, {
+      type: 'ab_comparison',
+      platform,
+      category,
+      purpose,
+      industry,
+      patternA: resultA,
+      patternB: resultB,
+      comparison,
+      analysis: `A/B比較分析: ${comparison.summary}`
+    })
+    if (!recordSuccess) {
+      console.warn('⚠️ A/B比較記録の保存に失敗しました')
+    }
+
+    return c.json({
+      success: true,
+      result: {
+        patternA: resultA,
+        patternB: resultB,
+        comparison
+      },
+      remaining_uses: Math.max(0, userData.remaining_uses - 2),
+      message: 'バナスコAI A/B比較分析が完了しました'
+    })
+
+  } catch (error) {
+    console.error('❌ バナスコAI A/B分析エラー:', error)
+    return c.json({ 
+      success: false, 
+      message: 'バナスコAI A/B分析中にエラーが発生しました。もう一度試してください。',
+      error: error.message 
+    }, 500)
+  }
+})
+
 // OpenAI Vision API分析実行
 async function performVisionAnalysis(imageBase64: string, platform: string, adType: string, apiKey: string) {
   const platformPrompts = {
@@ -469,6 +673,285 @@ function generateComparison(resultA: any, resultB: any) {
       winner,
       summary: winner === '引き分け' ? '両パターンとも同程度の評価です。' : `パターン${winner}がより高い評価です。`
     }
+  }
+}
+
+// バナスコAI Vision API分析実行
+async function performBanascoAnalysis(imageBase64: string, platform: string, category: string, purpose: string, industry: string, apiKey: string) {
+  const prompt = `あなたは『バナスコAI』- 最先端のバナー広告分析AIです。以下のバナー広告を詳細分析してください。
+
+【分析対象】
+- 媒体: ${platform}
+- カテゴリー: ${category}  
+- 目的: ${purpose}
+- 業界: ${industry}
+
+【採点基準】
+1. 視認性 (20点): 見やすさ、読みやすさ、色彩バランス
+2. 訴求力 (20点): メッセージの明確さ、感情的アピール  
+3. デザイン (20点): レイアウト、フォント、画像品質
+4. 媒体適合性 (20点): ${platform}での表示最適化
+5. 業界適合性 (20点): ${industry}業界での効果予測
+
+【出力形式】
+**📊 バナスコAI分析結果**
+
+**🏆 総合評価:** [A/B/C] ([0-100]点)
+
+**📈 詳細採点:**
+- 視認性: [0-20]点
+- 訴求力: [0-20]点  
+- デザイン: [0-20]点
+- 媒体適合性: [0-20]点
+- 業界適合性: [0-20]点
+
+**💡 改善提案:**
+1. [具体的改善案1]
+2. [具体的改善案2] 
+3. [具体的改善案3]
+
+**⚖️ 薬機法チェック:** ${industry === '美容' || industry === '健康' || industry === '医療' ? '[要注意/問題なし] - [薬機法に関する具体的指摘]' : '対象外'}
+
+**🎯 効果予測:** [CTR予測値]% | [CVR予測値]%`
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: imageBase64 } }
+        ]
+      }],
+      max_tokens: 800
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.status}`)
+  }
+
+  const result = await response.json()
+  const analysis = result.choices[0].message.content
+
+  // スコアとグレードを抽出
+  const gradeMatch = analysis.match(/総合評価.*?([ABC])/i) || analysis.match(/\*\*([ABC])\*\*/i)
+  const grade = gradeMatch ? gradeMatch[1] : 'B'
+  
+  const scoreMatch = analysis.match(/(\d+)点/i) || analysis.match(/\((\d+)\)/i)
+  const score = scoreMatch ? parseInt(scoreMatch[1]) : 75
+
+  // 薬機法チェック結果を抽出
+  const complianceMatch = analysis.match(/薬機法チェック.*?([要注意|問題なし])/i)
+  const compliance = complianceMatch ? complianceMatch[1] : '対象外'
+
+  return {
+    grade,
+    score,
+    analysis,
+    platform,
+    category,
+    purpose,
+    industry,
+    compliance,
+    improvements: extractBanascoImprovements(analysis)
+  }
+}
+
+// バナスコAI改善提案抽出
+function extractBanascoImprovements(analysis: string): string[] {
+  const improvements = []
+  const lines = analysis.split('\n')
+  
+  let inImprovementSection = false
+  for (const line of lines) {
+    if (line.includes('改善提案') || line.includes('💡')) {
+      inImprovementSection = true
+      continue
+    }
+    
+    if (inImprovementSection && line.trim()) {
+      if (line.match(/^\d+\./) || line.includes('-')) {
+        improvements.push(line.trim())
+      } else if (line.includes('薬機法') || line.includes('効果予測')) {
+        break
+      }
+    }
+  }
+  
+  return improvements.length > 0 ? improvements : [
+    'より高画質な画像を使用することをお勧めします',
+    'メッセージの簡潔性を向上させてください', 
+    'ターゲット層に合わせた色彩調整を検討してください'
+  ]
+}
+
+// バナスコAI A/B比較結果生成
+function generateBanascoComparison(resultA: any, resultB: any) {
+  const winner = resultA.score > resultB.score ? 'A' : (resultB.score > resultA.score ? 'B' : '引き分け')
+  const difference = Math.abs(resultA.score - resultB.score)
+  
+  let summary = ''
+  if (winner === '引き分け') {
+    summary = '両パターンとも同程度の評価です。'
+  } else {
+    summary = `パターン${winner}が${difference}点高い評価です。`
+    
+    if (difference >= 20) {
+      summary += ' 大きな差があります。'
+    } else if (difference >= 10) {
+      summary += ' 明確な差があります。'
+    } else {
+      summary += ' 僅差です。'
+    }
+  }
+  
+  return {
+    winner,
+    difference,
+    summary,
+    recommendation: winner !== '引き分け' ? `パターン${winner}の採用をお勧めします` : '両パターンともさらなら改善を検討してください'
+  }
+}
+
+// --- Firebase Firestore操作関数（REST API使用） ---
+
+// Firestoreからユーザーデータを取得
+async function getUserDataFromFirestore(uid: string, projectId: string) {
+  try {
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}`
+    
+    const response = await fetch(firestoreUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      const doc = await response.json()
+      if (doc.fields) {
+        return {
+          plan: doc.fields.plan?.stringValue || 'Free',
+          remaining_uses: parseInt(doc.fields.remaining_uses?.integerValue || '5'),
+          email: doc.fields.email?.stringValue || ''
+        }
+      }
+    }
+    
+    // ドキュメントが存在しない場合、新規作成
+    return await createUserInFirestore(uid, projectId)
+  } catch (error) {
+    console.error('Firestore ユーザーデータ取得エラー:', error)
+    return { plan: 'Free', remaining_uses: 5, email: '' }
+  }
+}
+
+// Firestoreに新規ユーザーを作成
+async function createUserInFirestore(uid: string, projectId: string, email?: string) {
+  try {
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}`
+    
+    const userData = {
+      fields: {
+        email: { stringValue: email || '' },
+        plan: { stringValue: 'Free' },
+        remaining_uses: { integerValue: 5 },
+        created_at: { timestampValue: new Date().toISOString() }
+      }
+    }
+    
+    const response = await fetch(firestoreUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(userData)
+    })
+    
+    if (response.ok) {
+      return { plan: 'Free', remaining_uses: 5, email: email || '' }
+    } else {
+      console.error('Firestore ユーザー作成に失敗:', await response.text())
+      return { plan: 'Free', remaining_uses: 5, email: '' }
+    }
+  } catch (error) {
+    console.error('Firestore ユーザー作成エラー:', error)
+    return { plan: 'Free', remaining_uses: 5, email: '' }
+  }
+}
+
+// ユーザーの利用回数を更新
+async function updateUserUsesInFirestore(uid: string, projectId: string, usesToDeduct: number = 1) {
+  try {
+    const userData = await getUserDataFromFirestore(uid, projectId)
+    const newRemainingUses = Math.max(0, userData.remaining_uses - usesToDeduct)
+    
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}`
+    
+    const updateData = {
+      fields: {
+        remaining_uses: { integerValue: newRemainingUses },
+        last_used_at: { timestampValue: new Date().toISOString() }
+      }
+    }
+    
+    const response = await fetch(firestoreUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updateData)
+    })
+    
+    return response.ok
+  } catch (error) {
+    console.error('Firestore 利用回数更新エラー:', error)
+    return false
+  }
+}
+
+// バナスコAI診断記録をFirestoreに保存
+async function addBanascoDiagnosisRecord(uid: string, projectId: string, recordData: any) {
+  try {
+    const timestamp = new Date().toISOString()
+    const docId = `banasco_${timestamp.replace(/[:.]/g, '_')}`
+    
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}/diagnoses/${docId}`
+    
+    const diagnosisData = {
+      fields: {
+        type: { stringValue: 'banasco_analysis' },
+        platform: { stringValue: recordData.platform || '' },
+        category: { stringValue: recordData.category || '' },
+        industry: { stringValue: recordData.industry || '' },
+        purpose: { stringValue: recordData.purpose || '' },
+        grade: { stringValue: recordData.grade || '' },
+        score: { integerValue: recordData.score || 0 },
+        analysis: { stringValue: recordData.analysis || '' },
+        compliance: { stringValue: recordData.compliance || '' },
+        created_at: { timestampValue: timestamp }
+      }
+    }
+    
+    const response = await fetch(firestoreUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(diagnosisData)
+    })
+    
+    return response.ok
+  } catch (error) {
+    console.error('Firestore 診断記録保存エラー:', error)
+    return false
   }
 }
 

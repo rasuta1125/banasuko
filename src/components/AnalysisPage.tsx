@@ -6,500 +6,357 @@ export const AnalysisPage = () => {
         <div class="text-center mb-12 animate-slide-up">
           <h1 class="text-4xl md:text-5xl font-orbitron font-bold mb-4">
             <span class="bg-gradient-to-r from-cyber-blue to-cyber-green bg-clip-text text-transparent">
-              AI広告診断
+              🧠 バナー広告 採点AI - バナスコ
             </span>
           </h1>
           <p class="text-xl text-gray-300 max-w-3xl mx-auto">
-            最先端banaAI Vision技術が画像を詳細分析し、効果予測と改善提案を提供
+            最先端バナスコAI Vision技術が画像を詳細分析し、A/B/C評価・100点満点採点・薬機法チェックを提供
           </p>
         </div>
-        
-        {/* Analysis Settings */}
+
+        {/* バナスコAI Settings */}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          {/* Basic Info */}
+          {/* バナスコAI設定 */}
           <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-blue/20 p-6">
             <h3 class="text-xl font-semibold text-cyber-blue mb-6">
-              <i class="fas fa-user-cog mr-2"></i>基本情報
+              <i class="fas fa-cog mr-2"></i>🧠 バナスコAI設定
             </h3>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">表示名</label>
-                <input 
-                  type="text" 
-                  id="userName"
-                  class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyber-blue transition-colors"
-                  placeholder="あなたの名前"
-                />
-              </div>
-              
-              <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">ターゲット年代</label>
-                <select 
-                  id="ageGroup"
-                  class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-blue transition-colors"
-                >
-                  <option value="">指定なし</option>
-                  <option value="10代">10代</option>
-                  <option value="20代">20代</option>
-                  <option value="30代">30代</option>
-                  <option value="40代">40代</option>
-                  <option value="50代">50代</option>
-                  <option value="60代以上">60代以上</option>
-                </select>
-              </div>
-              
-              <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">媒体</label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  <i class="fas fa-broadcast-tower mr-2"></i>媒体
+                </label>
                 <select 
                   id="platform"
                   class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-blue transition-colors"
-                  onchange="handlePlatformChange(this.value)"
+                  onchange="analysisManager.handlePlatformChange(this.value)"
                 >
-                  <option value="">媒体を選択してください</option>
-                  <option value="instagram-post">Instagram（投稿）</option>
-                  <option value="instagram-ad">Instagram（広告）</option>
-                  <option value="gdn">Googleディスプレイ広告</option>
-                  <option value="yahoo">Yahooディスプレイ広告</option>
-                </select>
-              </div>
-              
-              {/* Instagram広告タイプ詳細（広告選択時に表示） */}
-              <div id="instagramAdType" class="hidden">
-                <label class="block text-sm font-medium text-gray-300 mb-2">
-                  <i class="fab fa-instagram mr-2 text-cyber-pink"></i>Instagram広告タイプ
-                </label>
-                <select 
-                  id="instagramAdSubtype"
-                  class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-pink transition-colors"
-                >
-                  <option value="feed">フィード広告</option>
-                  <option value="stories">ストーリーズ広告</option>
-                  <option value="reels">リール広告</option>
-                  <option value="explore">発見タブ広告</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="Google">Google広告</option>
+                  <option value="Yahoo">Yahoo広告</option>
+                  <option value="Twitter">Twitter</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="YouTube">YouTube</option>
                 </select>
               </div>
               
               <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">目的</label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  <i class="fas fa-tag mr-2"></i>カテゴリー
+                </label>
+                <select 
+                  id="category"
+                  class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-blue transition-colors"
+                >
+                  <option value="広告">広告</option>
+                  <option value="投稿">投稿</option>
+                  <option value="ストーリー">ストーリー</option>
+                  <option value="バナー">バナー</option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  <i class="fas fa-bullseye mr-2"></i>目的
+                </label>
                 <select 
                   id="purpose"
                   class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-blue transition-colors"
                 >
-                  <option value="プロフィール誘導">プロフィール誘導</option>
-                  <option value="リンククリック">リンククリック</option>
-                  <option value="保存数増加">保存数増加</option>
-                  <option value="インプレッション増加">インプレッション増加</option>
+                  <option value="認知度向上">認知度向上</option>
+                  <option value="トラフィック獲得">トラフィック獲得</option>
+                  <option value="エンゲージメント">エンゲージメント</option>
+                  <option value="リード獲得">リード獲得</option>
+                  <option value="売上促進">売上促進</option>
+                  <option value="アプリ促進">アプリ促進</option>
                 </select>
               </div>
-            </div>
-            
-            {/* スコアタイプ表示 */}
-            <div id="scoringTypeInfo" class="mt-4 p-3 bg-navy-800/30 rounded-lg border border-gray-700/50">
-              <p class="text-gray-400 text-sm font-medium">📋 媒体を選択してください</p>
-            </div>
-          </div>
-          
-          {/* Industry Info */}
-          <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-green/20 p-6">
-            <h3 class="text-xl font-semibold text-cyber-green mb-6">
-              <i class="fas fa-industry mr-2"></i>業界情報
-            </h3>
-            <div class="space-y-4">
+              
               <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">業界</label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  <i class="fas fa-industry mr-2"></i>業界
+                </label>
                 <select 
                   id="industry"
-                  class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-green transition-colors"
+                  class="w-full px-4 py-2 bg-navy-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyber-blue transition-colors"
+                  onchange="analysisManager.handleIndustryChange(this.value)"
                 >
-                  <option value="美容">美容</option>
-                  <option value="飲食">飲食</option>
+                  <option value="美容">美容・コスメ</option>
+                  <option value="健康">健康・サプリ</option>
+                  <option value="医療">医療・クリニック</option>
+                  <option value="ファッション">ファッション</option>
+                  <option value="食品">食品・飲料</option>
+                  <option value="教育">教育・学習</option>
                   <option value="不動産">不動産</option>
-                  <option value="子ども写真館">子ども写真館</option>
+                  <option value="金融">金融・保険</option>
+                  <option value="旅行">旅行・観光</option>
+                  <option value="IT">IT・テクノロジー</option>
+                  <option value="エンタメ">エンタメ・ゲーム</option>
                   <option value="その他">その他</option>
                 </select>
               </div>
-              
-              <div class="flex items-center">
-                <input 
-                  type="checkbox" 
-                  id="abMode"
-                  class="w-4 h-4 text-cyber-green bg-navy-700 border-gray-600 rounded focus:ring-cyber-green/20 focus:ring-2"
-                />
-                <label for="abMode" class="ml-2 text-sm font-medium text-gray-300">
-                  🆚 A/B比較分析モード
-                </label>
-              </div>
-              <p class="text-xs text-gray-400">2つの画像を比較分析する場合にチェック</p>
             </div>
             
-            {/* Analysis Criteria */}
-            <div class="mt-6 p-4 bg-navy-700/30 rounded-lg border border-cyber-green/10">
-              <h4 class="text-sm font-semibold text-cyber-green mb-3">
-                <i class="fas fa-clipboard-list mr-2"></i>採点基準
-              </h4>
-              <div class="space-y-2 text-xs">
-                <div class="flex items-center text-gray-400">
-                  <i class="fas fa-bolt mr-2 text-cyber-blue w-4"></i>
-                  <span>瞬間伝達力 - 1秒で内容が理解できるか</span>
-                </div>
-                <div class="flex items-center text-gray-400">
-                  <i class="fas fa-eye mr-2 text-cyber-green w-4"></i>
-                  <span>視認性 - 文字が読みやすく配色が適切か</span>
-                </div>
-                <div class="flex items-center text-gray-400">
-                  <i class="fas fa-bullseye mr-2 text-cyber-pink w-4"></i>
-                  <span>行動喚起 - 明確なCTAでユーザーを誘導</span>
-                </div>
-                <div class="flex items-center text-gray-400">
-                  <i class="fas fa-sync mr-2 text-cyber-orange w-4"></i>
-                  <span>整合性 - 画像と文字内容の一致度</span>
-                </div>
-                <div class="flex items-center text-gray-400">
-                  <i class="fas fa-balance-scale mr-2 text-purple-400 w-4"></i>
-                  <span>情報バランス - 情報過多にならないか</span>
-                </div>
-              </div>
+            {/* 評価方式表示 */}
+            <div class="mt-4 p-3 bg-gradient-to-r from-cyber-green/10 to-cyber-blue/10 rounded-lg border border-cyber-green/30">
+              <p class="text-cyber-green text-sm font-medium">
+                <i class="fas fa-star mr-2"></i>📊 バナスコAI評価: A/B/C + 100点満点採点
+              </p>
             </div>
           </div>
-        </div>
-        
-        {/* Upload Section */}
-        <div id="singleUpload" class="mb-12">
-          <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-purple/20 p-8">
-            <h3 class="text-2xl font-semibold text-cyber-purple mb-6 text-center">
-              <i class="fas fa-cloud-upload-alt mr-2"></i>画像アップロード
+
+          {/* バナスコAI 画像アップロード */}
+          <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-orange/20 p-6">
+            <h3 class="text-xl font-semibold text-cyber-orange mb-6">
+              <i class="fas fa-upload mr-2"></i>🖼️ 画像アップロード
             </h3>
             
-            <div class="border-2 border-dashed border-cyber-purple/30 rounded-xl p-6 sm:p-8 text-center hover:border-cyber-purple/50 transition-colors duration-300">
-              <div id="dropZone" class="cursor-pointer">
-                <i class="fas fa-image text-4xl sm:text-6xl text-cyber-purple/50 mb-4"></i>
-                <p class="text-base sm:text-lg text-gray-300 mb-2">
-                  <span class="hidden sm:inline">画像をドラッグ&ドロップまたは</span>クリックしてアップロード
-                </p>
-                <p class="text-xs sm:text-sm text-gray-400 mb-4">PNG, JPG, JPEG対応（最大10MB）</p>
-                
-                {/* モバイル向けボタン */}
-                <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center">
-                  <button type="button" onclick="document.getElementById('imageUpload').click()" 
-                          class="w-full sm:w-auto bg-cyber-purple/20 border border-cyber-purple/50 text-cyber-purple px-4 py-2 rounded-lg hover:bg-cyber-purple/30 transition-colors">
-                    <i class="fas fa-folder-open mr-2"></i>ファイルを選択
+            {/* パターン選択 */}
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-300 mb-3">分析パターン</label>
+              <div class="grid grid-cols-2 gap-4">
+                <button 
+                  id="singlePatternBtn"
+                  onclick="analysisManager.selectAnalysisPattern('single')"
+                  class="pattern-btn bg-gradient-to-r from-cyber-blue to-cyber-green hover:from-cyber-blue/80 hover:to-cyber-green/80 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 active"
+                >
+                  <i class="fas fa-image mr-2"></i>単一分析
+                </button>
+                <button 
+                  id="abPatternBtn"
+                  onclick="analysisManager.selectAnalysisPattern('ab')"
+                  class="pattern-btn bg-navy-700 hover:bg-gradient-to-r hover:from-cyber-purple hover:to-cyber-pink text-gray-300 hover:text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300"
+                >
+                  <i class="fas fa-images mr-2"></i>A/B比較
+                </button>
+              </div>
+            </div>
+
+            {/* 単一パターン用アップロード */}
+            <div id="singleUploadSection" class="upload-section">
+              <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-cyber-blue transition-colors duration-300">
+                <input 
+                  type="file" 
+                  id="singleImageInput" 
+                  accept="image/*" 
+                  onchange="analysisManager.handleSingleImageUpload(event)"
+                  class="hidden"
+                />
+                <div id="singleUploadContent">
+                  <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                  <p class="text-gray-300 mb-2">バナー画像をアップロード</p>
+                  <p class="text-sm text-gray-500 mb-4">PNG, JPG, JPEG (最大10MB)</p>
+                  <button 
+                    onclick="document.getElementById('singleImageInput').click()" 
+                    class="btn btn-primary"
+                  >
+                    <i class="fas fa-plus mr-2"></i>画像を選択
                   </button>
-                  <button type="button" onclick="document.getElementById('cameraUpload').click()" 
-                          class="w-full sm:w-auto bg-cyber-blue/20 border border-cyber-blue/50 text-cyber-blue px-4 py-2 rounded-lg hover:bg-cyber-blue/30 transition-colors sm:hidden">
-                    <i class="fas fa-camera mr-2"></i>カメラで撮影
+                </div>
+                <div id="singleImagePreview" class="hidden">
+                  <img id="singlePreviewImg" src="" alt="Preview" class="max-w-full max-h-64 mx-auto rounded-lg shadow-lg mb-4"/>
+                  <p id="singleFileName" class="text-cyber-blue font-medium"></p>
+                  <button onclick="analysisManager.removeSingleImage()" class="text-red-400 hover:text-red-300 mt-2">
+                    <i class="fas fa-trash mr-1"></i>削除
                   </button>
                 </div>
-                
-                {/* ファイル入力 */}
-                <input type="file" id="imageUpload" class="hidden" 
-                       accept="image/png,image/jpeg,image/jpg,image/webp" 
-                       capture="environment" />
-                {/* カメラ専用入力（モバイル） */}
-                <input type="file" id="cameraUpload" class="hidden" 
-                       accept="image/*" 
-                       capture="environment" />
               </div>
             </div>
-            
-            <div id="imagePreview" class="hidden mt-6">
-              <img id="previewImage" class="max-w-xs h-auto max-h-64 rounded-lg border border-gray-600 mx-auto block" />
-              <p id="imageName" class="text-sm text-gray-400 mt-2 text-center"></p>
+
+            {/* A/Bパターン用アップロード */}
+            <div id="abUploadSection" class="upload-section hidden">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* パターンA */}
+                <div class="border-2 border-dashed border-gray-600 rounded-xl p-6 text-center hover:border-cyber-blue transition-colors duration-300">
+                  <input 
+                    type="file" 
+                    id="imageAInput" 
+                    accept="image/*" 
+                    onchange="analysisManager.handleABImageUpload(event, 'A')"
+                    class="hidden"
+                  />
+                  <h4 class="text-lg font-semibold text-cyber-blue mb-4">パターンA</h4>
+                  <div id="uploadContentA">
+                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-300 mb-2">画像A</p>
+                    <button 
+                      onclick="document.getElementById('imageAInput').click()" 
+                      class="btn btn-outline btn-sm"
+                    >
+                      選択
+                    </button>
+                  </div>
+                  <div id="imagePreviewA" class="hidden">
+                    <img id="previewImgA" src="" alt="Preview A" class="max-w-full max-h-48 mx-auto rounded-lg shadow-lg mb-3"/>
+                    <p id="fileNameA" class="text-cyber-blue text-sm font-medium"></p>
+                    <button onclick="analysisManager.removeABImage('A')" class="text-red-400 hover:text-red-300 mt-2 text-sm">
+                      <i class="fas fa-trash mr-1"></i>削除
+                    </button>
+                  </div>
+                </div>
+
+                {/* パターンB */}
+                <div class="border-2 border-dashed border-gray-600 rounded-xl p-6 text-center hover:border-cyber-pink transition-colors duration-300">
+                  <input 
+                    type="file" 
+                    id="imageBInput" 
+                    accept="image/*" 
+                    onchange="analysisManager.handleABImageUpload(event, 'B')"
+                    class="hidden"
+                  />
+                  <h4 class="text-lg font-semibold text-cyber-pink mb-4">パターンB</h4>
+                  <div id="uploadContentB">
+                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-300 mb-2">画像B</p>
+                    <button 
+                      onclick="document.getElementById('imageBInput').click()" 
+                      class="btn btn-outline btn-sm"
+                    >
+                      選択
+                    </button>
+                  </div>
+                  <div id="imagePreviewB" class="hidden">
+                    <img id="previewImgB" src="" alt="Preview B" class="max-w-full max-h-48 mx-auto rounded-lg shadow-lg mb-3"/>
+                    <p id="fileNameB" class="text-cyber-pink text-sm font-medium"></p>
+                    <button onclick="analysisManager.removeABImage('B')" class="text-red-400 hover:text-red-300 mt-2 text-sm">
+                      <i class="fas fa-trash mr-1"></i>削除
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 分析実行ボタン */}
+            <div class="mt-6 text-center">
+              <button 
+                id="analyzeButton"
+                onclick="analysisManager.startAnalysis()"
+                disabled
+                class="btn btn-primary btn-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <i class="fas fa-brain mr-2"></i>
+                <span id="analyzeButtonText">🧠 バナスコAI分析実行</span>
+              </button>
+              <p class="text-sm text-gray-400 mt-2">
+                画像をアップロードすると分析が可能になります
+              </p>
             </div>
           </div>
         </div>
-        
-        {/* A/B Upload Section */}
-        <div id="abUpload" class="hidden mb-12">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Pattern A */}
-            <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-blue/20 p-6">
-              <h3 class="text-xl font-semibold text-cyber-blue mb-4 text-center">
-                🅰️ パターンA
-              </h3>
-              <div class="border-2 border-dashed border-cyber-blue/30 rounded-xl p-4 sm:p-6 text-center hover:border-cyber-blue/50 transition-colors duration-300">
-                <div id="dropZoneA" class="cursor-pointer">
-                  <i class="fas fa-image text-3xl sm:text-4xl text-cyber-blue/50 mb-3"></i>
-                  <p class="text-sm sm:text-base text-gray-300 mb-2">画像Aをアップロード</p>
-                  <div class="flex flex-col gap-2">
-                    <button type="button" onclick="document.getElementById('imageUploadA').click()" 
-                            class="w-full bg-cyber-blue/20 border border-cyber-blue/50 text-cyber-blue px-3 py-1.5 rounded text-sm hover:bg-cyber-blue/30 transition-colors">
-                      <i class="fas fa-folder-open mr-1"></i>選択
-                    </button>
-                    <button type="button" onclick="document.getElementById('cameraUploadA').click()" 
-                            class="w-full bg-cyber-green/20 border border-cyber-green/50 text-cyber-green px-3 py-1.5 rounded text-sm hover:bg-cyber-green/30 transition-colors sm:hidden">
-                      <i class="fas fa-camera mr-1"></i>撮影
-                    </button>
-                  </div>
-                  <input type="file" id="imageUploadA" class="hidden" accept="image/png,image/jpeg,image/jpg,image/webp" />
-                  <input type="file" id="cameraUploadA" class="hidden" accept="image/*" capture="environment" />
-                </div>
-              </div>
-              <div id="imagePreviewA" class="hidden mt-4">
-                <img id="previewImageA" class="max-w-full h-auto max-h-48 rounded-lg border border-gray-600 mx-auto block" />
-              </div>
-            </div>
-            
-            {/* Pattern B */}
-            <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-pink/20 p-6">
-              <h3 class="text-xl font-semibold text-cyber-pink mb-4 text-center">
-                🅱️ パターンB
-              </h3>
-              <div class="border-2 border-dashed border-cyber-pink/30 rounded-xl p-4 sm:p-6 text-center hover:border-cyber-pink/50 transition-colors duration-300">
-                <div id="dropZoneB" class="cursor-pointer">
-                  <i class="fas fa-image text-3xl sm:text-4xl text-cyber-pink/50 mb-3"></i>
-                  <p class="text-sm sm:text-base text-gray-300 mb-2">画像Bをアップロード</p>
-                  <div class="flex flex-col gap-2">
-                    <button type="button" onclick="document.getElementById('imageUploadB').click()" 
-                            class="w-full bg-cyber-pink/20 border border-cyber-pink/50 text-cyber-pink px-3 py-1.5 rounded text-sm hover:bg-cyber-pink/30 transition-colors">
-                      <i class="fas fa-folder-open mr-1"></i>選択
-                    </button>
-                    <button type="button" onclick="document.getElementById('cameraUploadB').click()" 
-                            class="w-full bg-cyber-green/20 border border-cyber-green/50 text-cyber-green px-3 py-1.5 rounded text-sm hover:bg-cyber-green/30 transition-colors sm:hidden">
-                      <i class="fas fa-camera mr-1"></i>撮影
-                    </button>
-                  </div>
-                  <input type="file" id="imageUploadB" class="hidden" accept="image/png,image/jpeg,image/jpg,image/webp" />
-                  <input type="file" id="cameraUploadB" class="hidden" accept="image/*" capture="environment" />
-                </div>
-              </div>
-              <div id="imagePreviewB" class="hidden mt-4">
-                <img id="previewImageB" class="max-w-full h-auto max-h-48 rounded-lg border border-gray-600 mx-auto block" />
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Analysis Button */}
-        <div class="text-center mb-12">
-          <button 
-            id="analyzeButton" 
-            onclick="startSingleAnalysis()"
-            disabled
-            class="px-12 py-4 bg-gradient-to-r from-cyber-blue to-cyber-purple rounded-full text-white font-bold text-lg shadow-2xl hover:shadow-cyber-blue/50 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            <span id="analyzeButtonText">
-              <i class="fas fa-rocket mr-3"></i>AI分析開始
-            </span>
-            <span id="analyzeSpinner" class="hidden">
-              <i class="fas fa-spinner fa-spin mr-3"></i>AI分析中...
-            </span>
-          </button>
-        </div>
-        
-        {/* Results Section */}
-        <div id="resultsSection" class="hidden">
-          <div id="analysisResult"></div>
-          {/* Single Analysis Results */}
-          <div id="singleResults" class="hidden">
-            <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-green/20 p-8 mb-8 animate-slide-up">
-              <h3 class="text-2xl font-semibold text-cyber-green mb-6 text-center">
-                <i class="fas fa-chart-line mr-2"></i>AI分析結果
+
+        {/* バナスコAI 分析結果セクション */}
+        <div id="resultsSection" class="hidden animate-slide-up">
+          {/* 単一分析結果 */}
+          <div id="singleResult" class="result-section hidden">
+            <div class="bg-gradient-to-r from-cyber-blue/20 to-cyber-green/20 rounded-xl p-6 border border-cyber-blue/30 mb-8">
+              <h3 class="text-2xl font-semibold text-cyber-blue mb-6 text-center">
+                <i class="fas fa-chart-line mr-2"></i>🧠 バナスコAI分析結果
               </h3>
               
-              <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Score Section */}
-                <div class="space-y-4">
-                  {/* Total Score */}
-                  <div class="bg-gradient-to-br from-cyber-blue/20 to-cyber-purple/10 border border-cyber-blue/30 rounded-xl p-6 text-center">
-                    <div id="totalScore" class="text-5xl font-orbitron font-bold text-cyber-blue mb-2">82</div>
-                    <p class="text-gray-300">総合スコア</p>
-                    <p id="scoreLevel" class="text-cyber-green text-sm">優秀レベル</p>
-                  </div>
-                  
-                  {/* Individual Scores */}
-                  <div id="individualScores" class="space-y-3">
-                    {/* Scores will be populated by JavaScript */}
-                  </div>
-                </div>
-                
-                {/* Analysis Details */}
-                <div class="lg:col-span-2 space-y-6">
-                  <div class="bg-navy-700/30 rounded-xl p-6">
-                    <h4 class="text-lg font-semibold text-cyber-blue mb-4">
-                      <i class="fas fa-bullseye mr-2"></i>ターゲット適合度
-                    </h4>
-                    <div class="flex items-center mb-2">
-                      <span class="text-2xl font-bold text-cyber-green" id="targetMatch">91%</span>
-                      <span class="ml-2 text-gray-400">適合</span>
-                    </div>
-                    <p class="text-gray-300 text-sm">選択されたターゲット層に対する訴求力が非常に高く、適切なトーンとメッセージングが使用されています。</p>
-                  </div>
-                  
-                  <div class="bg-navy-700/30 rounded-xl p-6">
-                    <h4 class="text-lg font-semibold text-cyber-green mb-4">
-                      <i class="fas fa-check-circle mr-2"></i>強み・優秀なポイント
-                    </h4>
-                    <ul id="strengthsList" class="space-y-2 text-sm text-gray-300">
-                      {/* Strengths will be populated by JavaScript */}
-                    </ul>
-                  </div>
-                  
-                  <div class="bg-navy-700/30 rounded-xl p-6">
-                    <h4 class="text-lg font-semibold text-cyber-orange mb-4">
-                      <i class="fas fa-exclamation-triangle mr-2"></i>改善提案
-                    </h4>
-                    <ul id="improvementsList" class="space-y-2 text-sm text-gray-300">
-                      {/* Improvements will be populated by JavaScript */}
-                    </ul>
-                  </div>
-                  
-                  <div class="bg-navy-700/30 rounded-xl p-6">
-                    <h4 class="text-lg font-semibold text-cyber-pink mb-4">
-                      <i class="fas fa-chart-area mr-2"></i>予想パフォーマンス
-                    </h4>
-                    <div id="performanceMetrics" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      {/* Performance metrics will be populated by JavaScript */}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* A/B Comparison Results */}
-          <div id="abResults" class="hidden">
-            <div class="bg-navy-800/50 backdrop-blur-lg rounded-2xl border border-cyber-pink/20 p-8 mb-8 animate-slide-up">
-              <h3 class="text-2xl font-semibold text-cyber-pink mb-6 text-center">
-                <i class="fas fa-trophy mr-2"></i>A/B比較分析結果
-              </h3>
-              
-              {/* Winner Announcement */}
-              <div id="winnerAnnouncement" class="bg-gradient-to-r from-cyber-pink/20 to-cyber-orange/10 border border-cyber-pink/30 rounded-xl p-8 mb-8 text-center">
-                {/* Winner content will be populated by JavaScript */}
-              </div>
-              
-              {/* Detailed Comparison */}
-              <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Pattern A Results */}
-                <div class="bg-gradient-to-br from-cyber-blue/20 to-navy-700/30 border border-cyber-blue/30 rounded-xl p-6">
-                  <h4 class="text-xl font-semibold text-cyber-blue mb-4 text-center">
-                    🥇 パターンA (勝者)
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 総合評価 */}
+                <div class="bg-navy-800/50 rounded-lg p-4">
+                  <h4 class="text-lg font-semibold text-cyber-green mb-3">
+                    <i class="fas fa-trophy mr-2"></i>総合評価
                   </h4>
-                  <div class="text-center mb-4">
-                    <div class="text-3xl font-orbitron font-bold text-cyber-green">87</div>
-                    <p class="text-gray-300 text-sm">総合スコア</p>
-                  </div>
-                  <div id="patternAScores" class="space-y-2">
-                    {/* Pattern A scores will be populated by JavaScript */}
+                  <div id="overallRating" class="text-center">
+                    <div id="gradeDisplay" class="text-4xl font-bold mb-2"></div>
+                    <div id="scoreDisplay" class="text-2xl text-gray-300"></div>
                   </div>
                 </div>
-                
-                {/* VS Section */}
-                <div class="flex flex-col justify-center items-center">
-                  <div class="text-4xl font-orbitron font-bold text-cyber-pink mb-4">VS</div>
-                  <div class="text-center">
-                    <p class="text-gray-400 text-sm">スコア差</p>
-                    <p class="text-2xl font-bold text-cyber-green">+12点</p>
-                  </div>
-                </div>
-                
-                {/* Pattern B Results */}
-                <div class="bg-gradient-to-br from-gray-500/20 to-navy-700/30 border border-gray-500/30 rounded-xl p-6">
-                  <h4 class="text-xl font-semibold text-gray-400 mb-4 text-center">
-                    🥈 パターンB
+
+                {/* 詳細スコア */}
+                <div class="bg-navy-800/50 rounded-lg p-4">
+                  <h4 class="text-lg font-semibold text-cyber-orange mb-3">
+                    <i class="fas fa-chart-bar mr-2"></i>詳細採点
                   </h4>
-                  <div class="text-center mb-4">
-                    <div class="text-3xl font-orbitron font-bold text-cyber-orange">75</div>
-                    <p class="text-gray-300 text-sm">総合スコア</p>
-                  </div>
-                  <div id="patternBScores" class="space-y-2">
-                    {/* Pattern B scores will be populated by JavaScript */}
+                  <div id="detailScores" class="space-y-2">
+                    {/* スコアがここに動的に挿入されます */}
                   </div>
                 </div>
               </div>
-              
-              {/* Analysis Report */}
-              <div class="mt-8 bg-navy-700/30 rounded-xl p-6">
-                <h4 class="text-lg font-semibold text-cyber-blue mb-4">
-                  <i class="fas fa-clipboard-list mr-2"></i>詳細比較レポート
+
+              {/* 薬機法チェック */}
+              <div id="complianceCheck" class="mt-6 p-4 rounded-lg">
+                <h4 class="text-lg font-semibold mb-3">
+                  <i class="fas fa-balance-scale mr-2"></i>⚖️ 薬機法チェック
                 </h4>
-                <div id="comparisonReport" class="space-y-4 text-sm text-gray-300">
-                  {/* Comparison report will be populated by JavaScript */}
+                <div id="complianceResult" class="text-white">
+                  {/* 薬機法結果がここに表示されます */}
                 </div>
               </div>
-              
-              {/* Action Recommendations */}
-              <div class="mt-6 bg-gradient-to-r from-cyber-green/20 to-green-600/10 border border-cyber-green/30 rounded-xl p-6">
-                <h4 class="text-lg font-semibold text-cyber-green mb-4">
-                  <i class="fas fa-bullseye mr-2"></i>実装推奨アクション
+
+              {/* 改善提案 */}
+              <div class="mt-6 bg-navy-800/50 rounded-lg p-4">
+                <h4 class="text-lg font-semibold text-cyber-purple mb-3">
+                  <i class="fas fa-lightbulb mr-2"></i>💡 改善提案
                 </h4>
-                <div id="actionRecommendations" class="space-y-2 text-sm text-white">
-                  {/* Action recommendations will be populated by JavaScript */}
+                <div id="improvements" class="space-y-2 text-gray-300">
+                  {/* 改善提案がここに表示されます */}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* A/B比較結果 */}
+          <div id="abResult" class="result-section hidden">
+            <div class="bg-gradient-to-r from-cyber-green/20 to-cyber-orange/20 rounded-xl p-6 border border-cyber-green/30">
+              <h4 class="text-xl font-semibold text-cyber-green mb-4 text-center">
+                <i class="fas fa-trophy mr-2"></i>📊 A/Bテスト比較結果
+              </h4>
+              <div id="abComparisonContent" class="text-white">
+                {/* A/B比較結果がここに表示されます */}
               </div>
             </div>
           </div>
         </div>
       </div>
       
+      {/* バナスコAI専用JavaScript */}
       <script dangerouslySetInnerHTML={{
         __html: `
-          document.addEventListener('DOMContentLoaded', function() {
-            let uploadedImage = null;
-            let uploadedImageA = null;
-            let uploadedImageB = null;
-            let isAnalyzing = false;
+          // バナスコAI - 分析マネージャー
+          class BanascoAnalysisManager {
+            constructor() {
+              this.selectedPattern = 'single';
+              this.uploadedImage = null;
+              this.uploadedImageA = null;
+              this.uploadedImageB = null;
+              this.isAnalyzing = false;
+              this.init();
+            }
             
-            // DOM Elements
-            const abModeCheckbox = document.getElementById('abMode');
-            const singleUpload = document.getElementById('singleUpload');
-            const abUpload = document.getElementById('abUpload');
-            const dropZone = document.getElementById('dropZone');
-            const imageUpload = document.getElementById('imageUpload');
-            const imagePreview = document.getElementById('imagePreview');
-            const previewImage = document.getElementById('previewImage');
-            const imageName = document.getElementById('imageName');
-            const analyzeButton = document.getElementById('analyzeButton');
-            const analyzeButtonText = document.getElementById('analyzeButtonText');
-            const analyzeSpinner = document.getElementById('analyzeSpinner');
-            const resultsSection = document.getElementById('resultsSection');
-            const singleResults = document.getElementById('singleResults');
-            const abResults = document.getElementById('abResults');
+            init() {
+              console.log('🧠 バナスコAI 初期化完了');
+            }
             
-            // A/B mode toggle
-            abModeCheckbox.addEventListener('change', function() {
-              if (this.checked) {
-                singleUpload.classList.add('hidden');
-                abUpload.classList.remove('hidden');
-                updateAnalyzeButton();
+            selectAnalysisPattern(pattern) {
+              this.selectedPattern = pattern;
+              
+              // ボタンのアクティブ状態を更新
+              document.querySelectorAll('.pattern-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-gradient-to-r', 'from-cyber-blue', 'to-cyber-green');
+                btn.classList.add('bg-navy-700', 'text-gray-300');
+              });
+              
+              if (pattern === 'single') {
+                document.getElementById('singlePatternBtn').classList.add('active', 'bg-gradient-to-r', 'from-cyber-blue', 'to-cyber-green');
+                document.getElementById('singleUploadSection').classList.remove('hidden');
+                document.getElementById('abUploadSection').classList.add('hidden');
               } else {
-                singleUpload.classList.remove('hidden');
-                abUpload.classList.add('hidden');
-                updateAnalyzeButton();
+                document.getElementById('abPatternBtn').classList.add('active', 'bg-gradient-to-r', 'from-cyber-purple', 'to-cyber-pink');
+                document.getElementById('singleUploadSection').classList.add('hidden');
+                document.getElementById('abUploadSection').classList.remove('hidden');
               }
-            });
+              
+              this.updateAnalyzeButton();
+            }
             
-            // Single image upload
-            dropZone.addEventListener('click', () => {
-              imageUpload.click();
-            });
-            dropZone.addEventListener('dragover', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              dropZone.classList.add('border-cyber-purple');
-            });
-            dropZone.addEventListener('dragleave', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              dropZone.classList.remove('border-cyber-purple');
-            });
-            dropZone.addEventListener('drop', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              dropZone.classList.remove('border-cyber-purple');
-              const files = e.dataTransfer.files;
-              if (files.length > 0) {
-                handleImageUpload(files[0]);
-              }
-            });
-            
-            imageUpload.addEventListener('change', (e) => {
-              if (e.target.files.length > 0) {
-                handleImageUpload(e.target.files[0]);
-              }
-            });
-            
-            function handleImageUpload(file) {
+            handleSingleImageUpload(event) {
+              const file = event.target.files[0];
+              if (!file) return;
+              
               if (!file.type.startsWith('image/')) {
                 alert('画像ファイルを選択してください。');
                 return;
@@ -510,58 +367,23 @@ export const AnalysisPage = () => {
                 return;
               }
               
-              uploadedImage = file;
+              this.uploadedImage = file;
+              
               const reader = new FileReader();
               reader.onload = (e) => {
-                previewImage.src = e.target.result;
-                imageName.textContent = file.name;
-                imagePreview.classList.remove('hidden');
-                updateAnalyzeButton();
+                document.getElementById('singlePreviewImg').src = e.target.result;
+                document.getElementById('singleFileName').textContent = file.name;
+                document.getElementById('singleUploadContent').classList.add('hidden');
+                document.getElementById('singleImagePreview').classList.remove('hidden');
+                this.updateAnalyzeButton();
               };
               reader.readAsDataURL(file);
             }
             
-            // A/B upload handlers
-            setupABUpload('A');
-            setupABUpload('B');
-            
-            function setupABUpload(pattern) {
-              const dropZone = document.getElementById('dropZone' + pattern);
-              const imageUpload = document.getElementById('imageUpload' + pattern);
-              const imagePreview = document.getElementById('imagePreview' + pattern);
-              const previewImage = document.getElementById('previewImage' + pattern);
+            handleABImageUpload(event, pattern) {
+              const file = event.target.files[0];
+              if (!file) return;
               
-              dropZone.addEventListener('click', () => {
-                imageUpload.click();
-              });
-              dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dropZone.classList.add('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
-              });
-              dropZone.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dropZone.classList.remove('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
-              });
-              dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dropZone.classList.remove('border-cyber-' + (pattern === 'A' ? 'blue' : 'pink'));
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                  handleABImageUpload(files[0], pattern);
-                }
-              });
-              
-              imageUpload.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                  handleABImageUpload(e.target.files[0], pattern);
-                }
-              });
-            }
-            
-            function handleABImageUpload(file, pattern) {
               if (!file.type.startsWith('image/')) {
                 alert('画像ファイルを選択してください。');
                 return;
@@ -573,62 +395,97 @@ export const AnalysisPage = () => {
               }
               
               if (pattern === 'A') {
-                uploadedImageA = file;
+                this.uploadedImageA = file;
               } else {
-                uploadedImageB = file;
+                this.uploadedImageB = file;
               }
               
               const reader = new FileReader();
               reader.onload = (e) => {
-                document.getElementById('previewImage' + pattern).src = e.target.result;
+                document.getElementById('previewImg' + pattern).src = e.target.result;
+                document.getElementById('fileName' + pattern).textContent = file.name;
+                document.getElementById('uploadContent' + pattern).classList.add('hidden');
                 document.getElementById('imagePreview' + pattern).classList.remove('hidden');
-                updateAnalyzeButton();
+                this.updateAnalyzeButton();
               };
               reader.readAsDataURL(file);
             }
             
-            function updateAnalyzeButton() {
-              if (isAnalyzing) return;
-              
-              if (abModeCheckbox.checked) {
-                analyzeButton.disabled = !uploadedImageA || !uploadedImageB;
-              } else {
-                analyzeButton.disabled = !uploadedImage;
-              }
+            removeSingleImage() {
+              this.uploadedImage = null;
+              document.getElementById('singleUploadContent').classList.remove('hidden');
+              document.getElementById('singleImagePreview').classList.add('hidden');
+              document.getElementById('singleImageInput').value = '';
+              this.updateAnalyzeButton();
             }
             
-            // Analysis button handler
-            analyzeButton.addEventListener('click', async function() {
-              if (isAnalyzing) return;
+            removeABImage(pattern) {
+              if (pattern === 'A') {
+                this.uploadedImageA = null;
+                document.getElementById('imageAInput').value = '';
+              } else {
+                this.uploadedImageB = null;
+                document.getElementById('imageBInput').value = '';
+              }
               
-              isAnalyzing = true;
-              analyzeButton.disabled = true;
-              analyzeButtonText.classList.add('hidden');
-              analyzeSpinner.classList.remove('hidden');
+              document.getElementById('uploadContent' + pattern).classList.remove('hidden');
+              document.getElementById('imagePreview' + pattern).classList.add('hidden');
+              this.updateAnalyzeButton();
+            }
+            
+            updateAnalyzeButton() {
+              const analyzeBtn = document.getElementById('analyzeButton');
+              const btnText = document.getElementById('analyzeButtonText');
+              
+              if (this.isAnalyzing) {
+                analyzeBtn.disabled = true;
+                btnText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>分析中...';
+                return;
+              }
+              
+              let canAnalyze = false;
+              if (this.selectedPattern === 'single') {
+                canAnalyze = this.uploadedImage !== null;
+                btnText.innerHTML = '<i class="fas fa-brain mr-2"></i>🧠 バナスコAI分析実行';
+              } else {
+                canAnalyze = this.uploadedImageA !== null && this.uploadedImageB !== null;
+                btnText.innerHTML = '<i class="fas fa-brain mr-2"></i>🧠 バナスコAI A/B比較';
+              }
+              
+              analyzeBtn.disabled = !canAnalyze;
+            }
+            
+            async startAnalysis() {
+              if (this.isAnalyzing) return;
+              
+              this.isAnalyzing = true;
+              this.updateAnalyzeButton();
               
               try {
-                if (abModeCheckbox.checked) {
-                  await performABAnalysis();
+                if (this.selectedPattern === 'single') {
+                  await this.performSingleAnalysis();
                 } else {
-                  await performSingleAnalysis();
+                  await this.performABAnalysis();
                 }
               } catch (error) {
-                console.error('Analysis error:', error);
-                alert('分析中にエラーが発生しました。もう一度お試しください。');
+                console.error('🧠 バナスコAI分析エラー:', error);
+                alert('分析中にエラーが発生しました: ' + error.message);
               } finally {
-                isAnalyzing = false;
-                analyzeButton.disabled = false;
-                analyzeButtonText.classList.remove('hidden');
-                analyzeSpinner.classList.add('hidden');
-                updateAnalyzeButton();
+                this.isAnalyzing = false;
+                this.updateAnalyzeButton();
               }
-            });
+            }
             
-            async function performSingleAnalysis() {
+            async performSingleAnalysis() {
               const formData = new FormData();
-              formData.append('image', uploadedImage);
+              formData.append('image', this.uploadedImage);
+              formData.append('platform', document.getElementById('platform').value);
+              formData.append('category', document.getElementById('category').value);
+              formData.append('purpose', document.getElementById('purpose').value);
+              formData.append('industry', document.getElementById('industry').value);
+              formData.append('pattern', 'single');
               
-              const response = await fetch('/api/analysis/single', {
+              const response = await fetch('/api/analysis/banasco', {
                 method: 'POST',
                 body: formData
               });
@@ -636,18 +493,22 @@ export const AnalysisPage = () => {
               const data = await response.json();
               
               if (data.success) {
-                displaySingleResults(data.result);
+                this.displaySingleResults(data.result);
               } else {
-                throw new Error(data.message || '分析に失敗しました');
+                throw new Error(data.message || 'バナスコAI分析に失敗しました');
               }
             }
             
-            async function performABAnalysis() {
+            async performABAnalysis() {
               const formData = new FormData();
-              formData.append('imageA', uploadedImageA);
-              formData.append('imageB', uploadedImageB);
+              formData.append('imageA', this.uploadedImageA);
+              formData.append('imageB', this.uploadedImageB);
+              formData.append('platform', document.getElementById('platform').value);
+              formData.append('category', document.getElementById('category').value);
+              formData.append('purpose', document.getElementById('purpose').value);
+              formData.append('industry', document.getElementById('industry').value);
               
-              const response = await fetch('/api/analysis/compare', {
+              const response = await fetch('/api/analysis/ab-compare', {
                 method: 'POST',
                 body: formData
               });
@@ -655,111 +516,99 @@ export const AnalysisPage = () => {
               const data = await response.json();
               
               if (data.success) {
-                displayABResults(data.result);
+                this.displayABResults(data.result);
               } else {
-                throw new Error(data.message || 'A/B比較分析に失敗しました');
+                throw new Error(data.message || 'バナスコAI A/B比較に失敗しました');
               }
             }
             
-            function displaySingleResults(result) {
-              resultsSection.classList.remove('hidden');
-              singleResults.classList.remove('hidden');
-              abResults.classList.add('hidden');
+            displaySingleResults(result) {
+              console.log('🧠 バナスコAI結果表示:', result);
               
-              // Update total score
-              document.getElementById('totalScore').textContent = result.totalScore;
-              document.getElementById('scoreLevel').textContent = result.level;
+              // 結果セクションを表示
+              document.getElementById('resultsSection').classList.remove('hidden');
+              document.getElementById('singleResult').classList.remove('hidden');
+              document.getElementById('abResult').classList.add('hidden');
               
-              // Update individual scores
-              const scoresContainer = document.getElementById('individualScores');
-              scoresContainer.innerHTML = '';
+              // グレード表示
+              const gradeDisplay = document.getElementById('gradeDisplay');
+              const scoreDisplay = document.getElementById('scoreDisplay');
               
-              for (const [key, scoreData] of Object.entries(result.scores)) {
-                const scoreDiv = document.createElement('div');
-                scoreDiv.className = 'bg-navy-700/50 border border-gray-600 rounded-lg p-3 text-center';
-                scoreDiv.innerHTML = \`
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs text-gray-400">\${scoreData.label}</span>
-                    <span class="text-lg font-bold" style="color: \${scoreData.color}">\${scoreData.score}</span>
-                  </div>
-                  <div class="w-full bg-gray-700 rounded-full h-2">
-                    <div class="h-2 rounded-full" style="width: \${scoreData.score}%; background-color: \${scoreData.color}"></div>
-                  </div>
-                \`;
-                scoresContainer.appendChild(scoreDiv);
+              if (gradeDisplay && scoreDisplay) {
+                gradeDisplay.textContent = result.grade || 'B';
+                gradeDisplay.className = 'text-4xl font-bold mb-2 ' + this.getGradeColor(result.grade);
+                scoreDisplay.textContent = (result.score || 75) + '点 / 100点';
               }
               
-              // Update target match
-              document.getElementById('targetMatch').textContent = result.analysis.targetMatch + '%';
-              
-              // Update strengths
-              const strengthsList = document.getElementById('strengthsList');
-              strengthsList.innerHTML = '';
-              result.analysis.strengths.forEach(strength => {
-                const li = document.createElement('li');
-                li.innerHTML = '<i class="fas fa-check text-cyber-green mr-2"></i>' + strength;
-                strengthsList.appendChild(li);
-              });
-              
-              // Update improvements
-              const improvementsList = document.getElementById('improvementsList');
-              improvementsList.innerHTML = '';
-              result.analysis.improvements.forEach(improvement => {
-                const li = document.createElement('li');
-                li.innerHTML = '<i class="fas fa-arrow-up text-cyber-orange mr-2"></i>' + improvement;
-                improvementsList.appendChild(li);
-              });
-              
-              // Update performance metrics
-              const performanceContainer = document.getElementById('performanceMetrics');
-              performanceContainer.innerHTML = \`
-                <div class="bg-gradient-to-r from-green-600/20 to-green-400/10 border border-green-400/30 rounded-lg p-4 text-center">
-                  <div class="text-lg font-bold text-green-400">\${result.analysis.performance.clickRate.improved}%</div>
-                  <div class="text-xs text-gray-400">クリック率（+\${result.analysis.performance.clickRate.change}%）</div>
-                </div>
-                <div class="bg-gradient-to-r from-blue-600/20 to-blue-400/10 border border-blue-400/30 rounded-lg p-4 text-center">
-                  <div class="text-lg font-bold text-blue-400">\${result.analysis.performance.conversionRate.improved}%</div>
-                  <div class="text-xs text-gray-400">コンバージョン率（+\${result.analysis.performance.conversionRate.change}%）</div>
-                </div>
-                <div class="bg-gradient-to-r from-purple-600/20 to-purple-400/10 border border-purple-400/30 rounded-lg p-4 text-center">
-                  <div class="text-lg font-bold text-purple-400">+\${result.analysis.performance.brandAwareness.change}%</div>
-                  <div class="text-xs text-gray-400">ブランド認知向上</div>
-                </div>
-              \`;
-              
-              // Show note if using demo data
-              if (result.note) {
-                const noteDiv = document.createElement('div');
-                noteDiv.className = 'mt-4 p-3 bg-yellow-600/20 border border-yellow-400/30 rounded-lg text-center';
-                noteDiv.innerHTML = '<i class="fas fa-info-circle mr-2 text-yellow-400"></i>' + result.note;
-                performanceContainer.parentElement.appendChild(noteDiv);
+              // 薬機法チェック結果
+              const complianceResult = document.getElementById('complianceResult');
+              if (complianceResult) {
+                const compliance = result.compliance || '対象外';
+                complianceResult.innerHTML = '<span class="px-3 py-1 rounded-full text-sm font-medium ' + 
+                  (compliance.includes('問題なし') ? 'bg-green-600/20 text-green-400' : 
+                   compliance.includes('要注意') ? 'bg-red-600/20 text-red-400' : 
+                   'bg-gray-600/20 text-gray-400') + '">' + compliance + '</span>';
               }
               
-              // Scroll to results
-              resultsSection.scrollIntoView({ behavior: 'smooth' });
+              // 改善提案表示
+              const improvements = document.getElementById('improvements');
+              if (improvements && result.improvements) {
+                improvements.innerHTML = result.improvements.map(imp => 
+                  '<div class="flex items-start space-x-2"><i class="fas fa-lightbulb text-cyber-purple mt-1"></i><span>' + imp + '</span></div>'
+                ).join('');
+              }
+              
+              // 結果セクションにスクロール
+              document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
             }
             
-            function displayABResults(result) {
-              resultsSection.classList.remove('hidden');
-              abResults.classList.remove('hidden');
-              singleResults.classList.add('hidden');
+            displayABResults(result) {
+              console.log('🧠 バナスコAI A/B結果表示:', result);
               
-              // Show note if using demo data
-              if (result.note) {
-                const noteDiv = document.createElement('div');
-                noteDiv.className = 'mb-6 p-3 bg-yellow-600/20 border border-yellow-400/30 rounded-lg text-center';
-                noteDiv.innerHTML = '<i class="fas fa-info-circle mr-2 text-yellow-400"></i>' + result.note;
-                document.querySelector('#abResults .bg-navy-800\\/50').prepend(noteDiv);
+              // 結果セクションを表示
+              document.getElementById('resultsSection').classList.remove('hidden');
+              document.getElementById('abResult').classList.remove('hidden');
+              document.getElementById('singleResult').classList.add('hidden');
+              
+              const content = document.getElementById('abComparisonContent');
+              if (content && result.comparison) {
+                content.innerHTML = '<div class="text-center"><h3 class="text-xl font-semibold text-cyber-green mb-4">勝者: パターン' + 
+                  result.comparison.winner + '</h3><p class="text-gray-300 mb-4">' + result.comparison.summary + 
+                  '</p><p class="text-cyber-blue">' + result.comparison.recommendation + '</p></div>';
               }
               
-              // Scroll to results
-              resultsSection.scrollIntoView({ behavior: 'smooth' });
+              // 結果セクションにスクロール
+              document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
             }
+            
+            getGradeColor(grade) {
+              switch (grade) {
+                case 'A': return 'text-green-400';
+                case 'B': return 'text-yellow-400';  
+                case 'C': return 'text-red-400';
+                default: return 'text-gray-400';
+              }
+            }
+            
+            handlePlatformChange(platform) {
+              console.log('媒体変更:', platform);
+            }
+            
+            handleIndustryChange(industry) {
+              console.log('業界変更:', industry);
+            }
+          }
+          
+          // グローバルインスタンス作成
+          let analysisManager;
+          
+          document.addEventListener('DOMContentLoaded', function() {
+            analysisManager = new BanascoAnalysisManager();
           });
         `
       }} />
       
-      {/* 分析ページ専用JavaScript */}
+      {/* バナスコAI専用JavaScript */}
       <script src="/static/js/analysis.js"></script>
     </div>
   )
